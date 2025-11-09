@@ -35,8 +35,9 @@ export const HomePage = () => {
             <Logo size={280} className="mb-4" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold">TOYODA</h1>
+          <h2 className="text-2xl md:text-3xl font-bold"> Car‑hunting in the Jedi Way</h2>
           <p className="text-lg text-muted-foreground">
-            Automated dealer outreach for the best car prices
+            Best out-the-door prices, find them you will. <br /> Our droid calls the dealers for you.
           </p>
         </div>
 
