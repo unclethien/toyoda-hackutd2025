@@ -37,8 +37,8 @@ type AgentCallRequest struct {
 	PhoneNumber    string `json:"phone_number"`
 	MSRP           string `json:"msrp"`
 	ListingPrice   string `json:"listing_price"`
-	IsDealing      bool   `json:"is_dealing,omitempty"`
-	CompetingPrice int    `json:"competing_price,omitempty"`
+	IsDealing      bool   `json:"is_dealing"`
+	CompetingPrice int    `json:"competing_price"`
 }
 
 // CallSubmitResponse represents the response from the agent service
