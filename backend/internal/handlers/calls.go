@@ -9,23 +9,26 @@ import (
 	"strconv"
 	"time"
 
+	"hackutd2025/backend/internal/database"
+
 	"github.com/google/uuid"
 )
 
 // CallSubmitRequest represents the request from frontend for a single call
 type CallSubmitRequest struct {
-	Model        string  `json:"model"`
-	Year         int     `json:"year"`
-	ZipCode      string  `json:"zipcode"`
-	DealerName   string  `json:"dealer_name"`
-	PhoneNumber  string  `json:"phone_number"`
-	MSRP         float64 `json:"msrp"`
-	ListingPrice float64 `json:"listing_price"`
+	UserID       string `json:"user_id"`
+	Model        string `json:"model"`
+	Year         int    `json:"year"`
+	ZipCode      string `json:"zipcode"`
+	DealerName   string `json:"dealer_name"`
+	PhoneNumber  string `json:"phone_number"`
+	MSRP         int64  `json:"msrp"`
+	ListingPrice int64  `json:"listing_price"`
 }
 
 // AgentCallRequest represents the request to send to the agent service
 type AgentCallRequest struct {
-	UserID       string `json:"user_id"`
+	CallID       string `json:"user_id"`
 	Make         string `json:"make"`
 	Model        string `json:"model"`
 	Year         string `json:"year"`
@@ -88,18 +91,25 @@ func SubmitCalls(w http.ResponseWriter, r *http.Request) {
 	agentRequests := make([]AgentCallRequest, len(requests))
 	for i, req := range requests {
 		agentRequests[i] = AgentCallRequest{
-			UserID:       generateUserID(),
+			CallID:       generateUserID(),
 			Make:         "toyota", // Constant as specified
 			Model:        req.Model,
 			Year:         strconv.Itoa(req.Year),
 			ZipCode:      req.ZipCode,
 			DealerName:   req.DealerName,
 			PhoneNumber:  req.PhoneNumber,
-			MSRP:         fmt.Sprintf("%f", req.MSRP),
-			ListingPrice: fmt.Sprintf("%f", req.ListingPrice),
+			MSRP:         strconv.FormatInt(req.MSRP, 10),
+			ListingPrice: strconv.FormatInt(req.ListingPrice, 10),
 		}
 		log.Printf("Generated call request %d: user_id=%s, dealer=%s, phone=%s, model=%s %d",
-			i+1, agentRequests[i].UserID, req.DealerName, req.PhoneNumber, req.Model, req.Year)
+			i+1, agentRequests[i].CallID, req.DealerName, req.PhoneNumber, req.Model, req.Year)
+
+		// Store call in database
+		if err := database.CreateCall(req.UserID, agentRequests[i].CallID, req.Model, req.Year, req.ZipCode, req.DealerName, req.PhoneNumber, req.MSRP, req.ListingPrice); err != nil {
+			log.Printf("⚠️  Warning: Failed to store call in database: %v", err)
+		} else {
+			log.Printf("✅ Call stored in database: %s", agentRequests[i].CallID)
+		}
 	}
 
 	// Call the agent service
@@ -224,13 +234,80 @@ func FinishCall(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Call finished - UserID: %s, IsAvailable: %t, DealPrice: %d, Remarks: %s",
 		request.UserID, request.IsAvailable, request.DealPrice, request.Remarks)
 
-	// TODO: Store this information in a persistent data structure
-	// For now, just log and acknowledge receipt
+	// Update call in database
+	if err := database.UpdateCallResult(request.UserID, request.IsAvailable, request.DealPrice, request.Remarks); err != nil {
+		log.Printf("⚠️  Warning: Failed to update call in database: %v", err)
+	} else {
+		log.Printf("✅ Call updated in database: %s", request.UserID)
+	}
 
 	// Return success response
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(CallFinishResponse{
 		Success: true,
 		Message: "Call completion recorded successfully",
+	})
+}
+
+// GetCall retrieves a specific call by user ID
+func GetCall(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	userID := r.URL.Query().Get("user_id")
+	if userID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "user_id parameter is required",
+		})
+		return
+	}
+
+	call, err := database.GetCallByUserID(userID)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Call not found",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"data":    call,
+	})
+}
+
+// GetAllCalls retrieves all calls with optional status filter
+func GetAllCalls(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	status := r.URL.Query().Get("status")
+
+	var calls []database.Call
+	var err error
+
+	if status != "" {
+		calls, err = database.GetCallsByStatus(status)
+	} else {
+		calls, err = database.GetAllCalls()
+	}
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Failed to retrieve calls",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"count":   len(calls),
+		"data":    calls,
 	})
 }

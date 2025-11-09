@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"hackutd2025/backend/internal/database"
 	"hackutd2025/backend/internal/handlers"
 
 	"github.com/gorilla/mux"
@@ -12,6 +13,17 @@ import (
 )
 
 func main() {
+	// Initialize database
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		dbURL = "postgresql://postgres.unumxkxvyczhhcwbwfus:pa22w0rd@aws-1-us-east-1.pooler.supabase.com:6543/postgres"
+	}
+
+	if err := database.InitDB(dbURL); err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer database.CloseDB()
+
 	// Create router
 	router := mux.NewRouter()
 
@@ -20,6 +32,8 @@ func main() {
 	router.HandleFunc("/api/dealers/search", handlers.SearchDealers).Methods("POST")
 	router.HandleFunc("/api/calls/submit", handlers.SubmitCalls).Methods("POST")
 	router.HandleFunc("/api/calls/finish", handlers.FinishCall).Methods("POST")
+	router.HandleFunc("/api/calls", handlers.GetAllCalls).Methods("GET")
+	router.HandleFunc("/api/calls/get", handlers.GetCall).Methods("GET")
 
 	// Health check endpoint
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
