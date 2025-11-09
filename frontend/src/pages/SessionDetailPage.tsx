@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Logo } from "@/components/Logo";
 
 export const SessionDetailPage = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -30,7 +31,8 @@ export const SessionDetailPage = () => {
 
   if (!session || !listings) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
+        <Logo size={72} />
         <div className="text-muted-foreground">Loading session...</div>
       </div>
     );

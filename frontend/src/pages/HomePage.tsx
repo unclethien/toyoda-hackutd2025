@@ -1,9 +1,10 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { Phone, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Logo } from "@/components/Logo";
 
 export const HomePage = () => {
   const { isAuthenticated, loginWithRedirect, isLoading } = useAuth0();
@@ -18,8 +19,9 @@ export const HomePage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-functional-gray">
-        <div className="text-white text-xl">Loading...</div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-muted gap-4">
+        <Logo size={64} />
+        <div className="text-foreground text-xl">Loading...</div>
       </div>
     );
   }
@@ -30,7 +32,7 @@ export const HomePage = () => {
         {/* Hero Section */}
         <div className="space-y-4">
           <div className="flex justify-center">
-            <Phone className="h-16 w-16 text-primary" />
+            <Logo size={144} className="mb-4" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold">TOYODA</h1>
           <p className="text-lg text-muted-foreground">

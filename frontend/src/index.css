@@ -277,3 +277,14 @@ body {
     --tw-ring-offset-color: hsl(var(--background));
   }
 }
+
+/* Select Dropdown Fixes */
+[data-radix-select-content] {
+  z-index: 9999 !important;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+[data-radix-select-viewport] {
+  max-height: 300px;
+}

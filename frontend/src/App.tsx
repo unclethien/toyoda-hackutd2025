@@ -7,6 +7,7 @@ import { HomePage } from "./pages/HomePage";
 import { SessionsPage } from "./pages/SessionsPage";
 import { CreateSessionPage } from "./pages/CreateSessionPage";
 import { SessionDetailPage } from "./pages/SessionDetailPage";
+import { Logo } from "./components/Logo";
 import "./index.css";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
@@ -28,7 +29,8 @@ function AppRoutes() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-muted gap-4">
+        <Logo size={64} />
         <div className="text-foreground text-xl">Loading...</div>
       </div>
     );
