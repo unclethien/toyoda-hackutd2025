@@ -12,6 +12,8 @@ import { Logo } from "./components/Logo";
 import { Toaster } from "./components/ui/sonner";
 import "./index.css";
 import { useMemo } from "react";
+import { ConvexProviderWithAuth0 } from "convex/react-auth0";
+
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
@@ -19,10 +21,10 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <ConvexAuth>
+        <ConvexProviderWithAuth0 client={convex}>
           <AppRoutes />
           <Toaster />
-        </ConvexAuth>
+        </ConvexProviderWithAuth0>
       </AuthProvider>
     </BrowserRouter>
   );

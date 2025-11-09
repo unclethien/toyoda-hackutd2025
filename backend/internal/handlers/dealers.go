@@ -8,11 +8,11 @@ import (
 
 // DealerSearchRequest represents the search criteria from frontend
 type DealerSearchRequest struct {
-	Make         string  `json:"make"`
-	Model        string  `json:"model"`
-	Version      string  `json:"version"`
-	ZipCode      string  `json:"zipCode"`
-	RadiusMiles  int     `json:"radiusMiles"`
+	Make        string `json:"make"`
+	Model       string `json:"model"`
+	Version     string `json:"version"`
+	ZipCode     string `json:"zipCode"`
+	RadiusMiles int    `json:"radiusMiles"`
 }
 
 // DealerResponse represents a single dealer with car listing
@@ -28,10 +28,10 @@ type DealerResponse struct {
 
 // DealerSearchResponse represents the API response
 type DealerSearchResponse struct {
-	Success bool              `json:"success"`
-	Dealers []DealerResponse  `json:"dealers"`
-	Count   int               `json:"count"`
-	Message string            `json:"message"`
+	Success bool             `json:"success"`
+	Dealers []DealerResponse `json:"dealers"`
+	Count   int              `json:"count"`
+	Message string           `json:"message"`
 }
 
 // ErrorResponse represents an error response

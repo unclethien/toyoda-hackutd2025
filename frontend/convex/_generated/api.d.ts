@@ -8,10 +8,12 @@
  * @module
  */
 
+import type * as _internal from "../_internal.js";
 import type * as actions from "../actions.js";
 import type * as calls from "../calls.js";
 import type * as listings from "../listings.js";
 import type * as quotes from "../quotes.js";
+import type * as scheduler from "../scheduler.js";
 import type * as sessions from "../sessions.js";
 
 import type {
@@ -29,10 +31,12 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  _internal: typeof _internal;
   actions: typeof actions;
   calls: typeof calls;
   listings: typeof listings;
   quotes: typeof quotes;
+  scheduler: typeof scheduler;
   sessions: typeof sessions;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

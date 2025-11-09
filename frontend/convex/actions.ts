@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import _ from "lodash";
 
 // Types for the backend response
 interface DealerResponse {
@@ -55,7 +56,7 @@ export const fetchDealers = action({
 
       // 3. Call Go backend
       // Note: Convex environment variables are configured via `npx convex env set`
-      const backendUrl = "http://localhost:8080";
+      const backendUrl = "https://unsymptomatic-dacia-tribal.ngrok-free.dev";
       const response = await fetch(`${backendUrl}/api/dealers/search`, {
         method: "POST",
         headers: {
@@ -130,11 +131,11 @@ export const fetchDealers = action({
 interface DealerQuery {
   make: string;
   model: string;
-  year: string;
+  year: number;
   zipcode: string;
   dealer_name: string;
-  msrp: string;
-  listing_price: string;
+  msrp: number;
+  listing_price: number;
   phone_number: string;
   user_id: string;
 }
@@ -189,18 +190,18 @@ export const initiateBatchCalls = action({
       const dealerQueries: DealerQuery[] = validListings.map((listing) => ({
         make: session.carType.split(" ")[0], // e.g., "Toyota" from "Toyota RAV4"
         model: session.model,
-        year: session.version, // Assuming version contains year info
+        year: 2015, // parseInt(session.year), // Assuming version contains year info
         zipcode: session.zipCode,
         dealer_name: listing!.dealerName,
-        msrp: listing!.msrp.toString(),
-        listing_price: listing!.discountedPrice.toString(),
-        phone_number: listing!.phone,
+        msrp: listing!.msrp,
+        listing_price: listing!.discountedPrice,
+        phone_number: _.sample(["+19452740673", "+19727836556", "+12406601769"]),
         user_id: session.userId,
       }));
 
       // 5. Call Python agent server
-      const agentServerUrl = "http://localhost:8000"; // TODO: Move to env var
-      const response = await fetch(`${agentServerUrl}/calls/init`, {
+      const agentServerUrl = "https://unsymptomatic-dacia-tribal.ngrok-free.dev"; // TODO: Move to env var
+      const response = await fetch(`${agentServerUrl}/api/calls/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

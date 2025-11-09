@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -27,6 +28,9 @@ func InitDB(connectionString string) error {
 	config.MaxConnLifetime = 5 * time.Minute
 	config.MaxConnIdleTime = 30 * time.Second
 	config.HealthCheckPeriod = 1 * time.Minute
+
+	// Disable prepared statement caching to avoid conflicts during concurrent operations
+	config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 
 	// Create connection pool
 	Pool, err = pgxpool.NewWithConfig(ctx, config)

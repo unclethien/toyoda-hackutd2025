@@ -1,34 +1,48 @@
-import { useState, useMemo } from "react";
-import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  flexRender,
-  type ColumnDef,
-  type SortingState,
-  type ColumnFiltersState,
-} from "@tanstack/react-table";
+import { useState, useMemo, useEffect } from "react";
 import { useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { ArrowUpDown, Phone, Scale, CheckCircle2, AlertCircle, Clock, Loader2, PhoneCall, FileText } from "lucide-react";
+import { Phone, Scale, CheckCircle2, AlertCircle, Clock, Loader2, PhoneCall, FileText, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { formatCurrency, calculateSavings } from "../../lib/utils";
 import { toast } from "sonner";
 import { CompareDrawer } from "./CompareDrawer";
 import { QuoteRecordForm } from "../quotes/QuoteRecordForm";
+
+// Backend API call types
+interface BackendCall {
+  id: number;
+  user_id?: string;
+  call_id?: string;
+  model?: string;
+  year?: number;
+  zipcode?: string;
+  dealer_name?: string;
+  phone_number?: string;
+  msrp?: number;
+  listing_price?: number;
+  status?: "pending" | "completed" | "failed";
+  is_available?: boolean;
+  deal_price?: number;
+  remarks?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BackendCallsResponse {
+  success: boolean;
+  count: number;
+  data: BackendCall[];
+}
 
 export interface Listing {
   _id: Id<"listings">;
@@ -37,6 +51,7 @@ export interface Listing {
   address?: string;
   msrp: number;
   discountedPrice: number;
+  dealPrice?: number; // Confirmed price from dealer call
   mpg: number;
   distance?: number;
   selected: boolean;
@@ -51,16 +66,93 @@ interface ListingsTableProps {
 }
 
 export function ListingsTable({ listings, sessionId }: ListingsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+
+  console.log("listings", listings);
+  console.log("sessionId", sessionId);
+  const [filterValue, setFilterValue] = useState("");
   const [compareDrawerOpen, setCompareDrawerOpen] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
   const [quoteFormOpen, setQuoteFormOpen] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [backendCalls, setBackendCalls] = useState<Map<string, BackendCall>>(new Map());
 
   const toggleSelect = useMutation(api.listings.toggleSelect);
   const initiateBatchCalls = useAction(api.actions.initiateBatchCalls);
+
+  // Fetch call data from backend API
+  const fetchCallData = async () => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/calls`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data: BackendCallsResponse = await response.json();
+      
+      if (data.success && data.data) {
+        // Map calls by dealer name for quick lookup
+        const callsMap = new Map<string, BackendCall>();
+        data.data.forEach((call) => {
+          if (call.dealer_name) {
+            callsMap.set(call.dealer_name, call);
+          }
+        });
+        setBackendCalls(callsMap);
+      }
+    } catch (error) {
+      console.error("Failed to fetch call data:", error);
+    }
+  };
+
+  // Poll for call updates every 3 seconds
+  useEffect(() => {
+    fetchCallData(); // Initial fetch
+    const interval = setInterval(fetchCallData, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Merge backend call data with listings
+  const listingsWithCallData = useMemo(() => {
+    return listings.map((listing) => {
+      const backendCall = backendCalls.get(listing.dealerName);
+      if (backendCall && backendCall.status) {
+        // Map backend status to our call status
+        let callStatus: Listing["callStatus"];
+        switch (backendCall.status) {
+          case "pending":
+            callStatus = "dialing";
+            break;
+          case "completed":
+            callStatus = "completed";
+            break;
+          case "failed":
+            callStatus = "failed";
+            break;
+          default:
+            callStatus = listing.callStatus;
+        }
+        
+        return {
+          ...listing,
+          callStatus,
+          hasQuote: backendCall.is_available ? true : listing.hasQuote,
+          dealPrice: backendCall.deal_price,
+        };
+      }
+      return listing;
+    });
+  }, [listings, backendCalls]);
+
+  // Filter listings based on search
+  const filteredListings = useMemo(() => {
+    if (!filterValue) return listingsWithCallData;
+    return listingsWithCallData.filter((listing) =>
+      listing.dealerName.toLowerCase().includes(filterValue.toLowerCase())
+    );
+  }, [listingsWithCallData, filterValue]);
 
   // Handle selection toggle
   const handleToggleSelection = async (listingId: Id<"listings">, currentSelected: boolean) => {
@@ -75,230 +167,33 @@ export function ListingsTable({ listings, sessionId }: ListingsTableProps) {
     }
   };
 
-  const columns: ColumnDef<Listing>[] = useMemo(
-    () => [
-      {
-        id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={table.getIsAllPageRowsSelected()}
-            onCheckedChange={(value: boolean) => {
-              table.toggleAllPageRowsSelected(!!value);
-              // Also update server-side selection
-              const allListings = table.getRowModel().rows.map(row => row.original);
-              allListings.forEach(listing => {
-                handleToggleSelection(listing._id, !value);
-              });
-            }}
-            aria-label="Select all"
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.original.selected}
-            onCheckedChange={() => {
-              handleToggleSelection(row.original._id, row.original.selected);
-            }}
-            aria-label="Select row"
-          />
-        ),
-        enableSorting: false,
-        enableHiding: false,
-      },
-      {
-        accessorKey: "dealerName",
-        header: ({ column }) => {
-          return (
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            >
-              Dealer
-              <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-          );
-        },
-        cell: ({ row }) => (
-          <div>
-            <div className="font-medium">{row.original.dealerName}</div>
-            <div className="text-sm text-muted-foreground">{row.original.phone}</div>
-            {row.original.address && (
-              <div className="text-xs text-muted-foreground">{row.original.address}</div>
-            )}
-          </div>
-        ),
-      },
-      {
-        accessorKey: "msrp",
-        header: ({ column }) => {
-          return (
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            >
-              MSRP
-              <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-          );
-        },
-        cell: ({ row }) => (
-          <div className="text-sm text-muted-foreground line-through">
-            {formatCurrency(row.original.msrp)}
-          </div>
-        ),
-      },
-      {
-        accessorKey: "discountedPrice",
-        header: ({ column }) => {
-          return (
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            >
-              Price
-              <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-          );
-        },
-        cell: ({ row }) => {
-          const savings = calculateSavings(row.original.msrp, row.original.discountedPrice);
-          return (
-            <div>
-              <div className="font-bold text-primary">
-                {formatCurrency(row.original.discountedPrice)}
-              </div>
-              {savings > 0 && (
-                <div className="text-xs text-green-600">
-                  Save {savings}%
-                </div>
-              )}
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: "mpg",
-        header: ({ column }) => {
-          return (
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            >
-              MPG
-              <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-          );
-        },
-        cell: ({ row }) => <div>{row.original.mpg}</div>,
-      },
-      {
-        accessorKey: "distance",
-        header: ({ column }) => {
-          return (
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            >
-              Distance
-              <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-          );
-        },
-        cell: ({ row }) => (
-          <div className="text-sm text-muted-foreground">
-            {row.original.distance ? `${row.original.distance.toFixed(1)} mi` : "—"}
-          </div>
-        ),
-      },
-      {
-        accessorKey: "callStatus",
-        header: "Status",
-        cell: ({ row }) => {
-          const status = row.original.callStatus;
-          if (!status) return <div className="text-xs text-muted-foreground">—</div>;
+  // Render status badge
+  const renderStatusBadge = (status?: "queued" | "dialing" | "connected" | "completed" | "failed") => {
+    if (!status) return null;
 
-          const statusConfig = {
-            queued: { icon: Clock, color: "text-gray-500", label: "Queued" },
-            dialing: { icon: PhoneCall, color: "text-blue-500", label: "Calling" },
-            connected: { icon: Loader2, color: "text-blue-600 animate-spin", label: "Connected" },
-            completed: { icon: CheckCircle2, color: "text-green-600", label: "Completed" },
-            failed: { icon: AlertCircle, color: "text-red-600", label: "Failed" },
-          };
+    const statusConfig = {
+      queued: { icon: Clock, color: "text-gray-500", label: "Queued", variant: "outline" as const },
+      dialing: { icon: PhoneCall, color: "text-blue-500", label: "Calling", variant: "outline" as const },
+      connected: { icon: Loader2, color: "text-blue-600 animate-spin", label: "Connected", variant: "outline" as const },
+      completed: { icon: CheckCircle2, color: "text-green-600", label: "Completed", variant: "outline" as const },
+      failed: { icon: AlertCircle, color: "text-red-600", label: "Failed", variant: "destructive" as const },
+    };
 
-          const config = statusConfig[status];
-          const Icon = config.icon;
+    const config = statusConfig[status];
+    const Icon = config.icon;
 
-          return (
-            <div className="flex items-center gap-1.5">
-              <Icon className={`h-3.5 w-3.5 ${config.color}`} />
-              <span className={`text-xs font-medium ${config.color}`}>
-                {config.label}
-              </span>
-            </div>
-          );
-        },
-        enableSorting: false,
-      },
-      {
-        id: "actions",
-        header: "Actions",
-        cell: ({ row }) => {
-          const listing = row.original;
+    return (
+      <Badge variant={config.variant} className="gap-1">
+        <Icon className={`h-3 w-3 ${config.color}`} />
+        <span className={config.color}>{config.label}</span>
+      </Badge>
+    );
+  };
 
-          // Only show "Record Quote" button if call is completed and no quote exists
-          if (listing.callStatus === "completed" && !listing.hasQuote && listing.callId) {
-            return (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedListing(listing);
-                  setQuoteFormOpen(true);
-                }}
-              >
-                <FileText className="h-3 w-3 mr-1.5" />
-                Record Quote
-              </Button>
-            );
-          }
-
-          if (listing.hasQuote) {
-            return (
-              <span className="text-xs text-green-600 font-medium">
-                Quote Received
-              </span>
-            );
-          }
-
-          return <div className="text-xs text-muted-foreground">—</div>;
-        },
-        enableSorting: false,
-      },
-    ],
-    []
-  );
-
-  const table = useReactTable({
-    data: listings,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onRowSelectionChange: setRowSelection,
-    state: {
-      sorting,
-      columnFilters,
-      rowSelection,
-    },
-  });
-
-  const selectedCount = listings.filter((l) => l.selected).length;
+  const selectedCount = listingsWithCallData.filter((l) => l.selected).length;
 
   const handleInitiateCalls = async () => {
-    const selectedListings = listings.filter((l) => l.selected);
+    const selectedListings = listingsWithCallData.filter((l) => l.selected);
     if (selectedListings.length === 0) {
       toast.error("Please select at least one dealer");
       return;
@@ -319,6 +214,9 @@ export function ListingsTable({ listings, sessionId }: ListingsTableProps) {
         `Successfully initiated ${result.callCount} call${result.callCount !== 1 ? "s" : ""}! AI agents are now calling dealers.`,
         { id: "batch-calls" }
       );
+      
+      // Immediately fetch updated call data
+      fetchCallData();
     } catch (error) {
       console.error("Failed to initiate batch calls:", error);
       toast.error(
@@ -336,10 +234,8 @@ export function ListingsTable({ listings, sessionId }: ListingsTableProps) {
       <div className="flex items-center gap-2">
         <Input
           placeholder="Filter dealers..."
-          value={(table.getColumn("dealerName")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("dealerName")?.setFilterValue(event.target.value)
-          }
+          value={filterValue}
+          onChange={(event) => setFilterValue(event.target.value)}
           className="max-w-sm"
         />
         <div className="ml-auto flex items-center gap-2">
@@ -361,80 +257,138 @@ export function ListingsTable({ listings, sessionId }: ListingsTableProps) {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No dealers found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+      {/* Listings Count */}
+      <div className="text-sm text-muted-foreground">
+        {selectedCount} of {listingsWithCallData.length} dealer(s) selected
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {selectedCount} of {listings.length} dealer(s) selected
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
+      {/* Accordion List */}
+      <div className="rounded-md border">
+        {filteredListings.length > 0 ? (
+          <Accordion type="multiple" className="w-full">
+            {filteredListings.map((listing) => {
+              // Use dealPrice if available, otherwise use discountedPrice
+              const displayPrice = listing.dealPrice ?? listing.discountedPrice;
+              const savings = calculateSavings(listing.msrp, displayPrice);
+              const isConfirmedPrice = listing.dealPrice !== undefined;
+              
+              return (
+                <AccordionItem key={listing._id} value={listing._id}>
+                  <AccordionTrigger className="hover:no-underline px-4">
+                    <div className="flex items-center gap-3 w-full" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={listing.selected}
+                        onCheckedChange={() => {
+                          handleToggleSelection(listing._id, listing.selected);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Select listing"
+                      />
+                      
+                      <div className="flex items-center justify-between flex-1 text-left">
+                        <div className="flex flex-col gap-1">
+                          <div className="font-semibold text-base">{listing.dealerName}</div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xl font-bold text-primary">
+                              {formatCurrency(displayPrice)}
+                            </span>
+                            {isConfirmedPrice && (
+                              <Badge variant="default" className="bg-green-600">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Confirmed
+                              </Badge>
+                            )}
+                            {savings > 0 && (
+                              <Badge variant="outline" className="border-green-600 text-green-600">
+                                Save {savings}%
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          {renderStatusBadge(listing.callStatus)}
+                        </div>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  
+                  <AccordionContent className="px-4 pb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                      {/* Left Column */}
+                      <div className="space-y-3">
+                        <div>
+                          <div className="text-sm font-medium text-muted-foreground">Contact</div>
+                          <div className="text-sm mt-1">{listing.phone}</div>
+                          {listing.address && (
+                            <div className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
+                              <MapPin className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                              <span>{listing.address}</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div>
+                          <div className="text-sm font-medium text-muted-foreground">Pricing</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-sm line-through text-muted-foreground">
+                              {formatCurrency(listing.msrp)}
+                            </span>
+                            <span className="text-sm">MSRP</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Right Column */}
+                      <div className="space-y-3">
+                        <div>
+                          <div className="text-sm font-medium text-muted-foreground">Fuel Economy</div>
+                          <div className="text-sm mt-1">{listing.mpg} MPG</div>
+                        </div>
+                        
+                        {listing.distance !== undefined && (
+                          <div>
+                            <div className="text-sm font-medium text-muted-foreground">Distance</div>
+                            <div className="text-sm mt-1">{listing.distance.toFixed(1)} mi</div>
+                          </div>
+                        )}
+                        
+                        {/* Actions */}
+                        {listing.callStatus === "completed" && !listing.hasQuote && listing.callId && (
+                          <div className="pt-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedListing(listing);
+                                setQuoteFormOpen(true);
+                              }}
+                              className="w-full"
+                            >
+                              <FileText className="h-3.5 w-3.5 mr-2" />
+                              Record Quote
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+        ) : (
+          <div className="p-8 text-center text-muted-foreground">
+            No dealers found.
+          </div>
+        )}
       </div>
 
       {/* Compare Drawer */}
       <CompareDrawer
         open={compareDrawerOpen}
         onOpenChange={setCompareDrawerOpen}
-        listings={listings}
+        listings={listingsWithCallData}
       />
 
       {/* Quote Record Form */}

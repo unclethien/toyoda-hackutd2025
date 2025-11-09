@@ -141,7 +141,7 @@ func generateUserID() string {
 
 // callAgentService makes a request to the agent service to initiate calls
 func callAgentService(requests []AgentCallRequest) (interface{}, error) {
-	agentURL := "http://localhost:8000/calls/init"
+	agentURL := "https://unimplicitly-ebracteate-loma.ngrok-free.dev/calls/init"
 
 	// Marshal requests to JSON
 	jsonData, err := json.Marshal(requests)

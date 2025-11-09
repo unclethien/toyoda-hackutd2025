@@ -171,28 +171,28 @@ async def calls_webhook(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    from pyngrok import ngrok
+    # from pyngrok import ngrok
     import atexit
     
-    # Get ngrok auth token from environment (optional, for paid accounts)
-    ngrok_auth_token = os.getenv("NGROK_AUTH_TOKEN")
-    if ngrok_auth_token:
-        ngrok.set_auth_token(ngrok_auth_token)
+    # # Get ngrok auth token from environment (optional, for paid accounts)
+    # ngrok_auth_token = os.getenv("NGROK_AUTH_TOKEN")
+    # if ngrok_auth_token:
+    #     ngrok.set_auth_token(ngrok_auth_token)
     
-    # Start ngrok tunnel
+    # # Start ngrok tunnel
     port = 8000
-    tunnel = ngrok.connect(port)
-    public_url = tunnel.public_url
+    # tunnel = ngrok.connect(port)
+    # public_url = tunnel.public_url
     
     print("=" * 60)
     print("🚀 FastAPI server starting...")
     print("=" * 60)
     print(f"📍 Local URL: http://localhost:{port}")
-    print(f"🌐 Public URL: {public_url}")
-    print(f"   - Status endpoint: {public_url}/status")
-    print(f"   - Health endpoint: {public_url}/health")
-    print(f"   - API docs: {public_url}/docs")
-    print(f"   - Calls init: {public_url}/calls/init")
+    # print(f"🌐 Public URL: {public_url}")
+    # print(f"   - Status endpoint: {public_url}/status")
+    # print(f"   - Health endpoint: {public_url}/health")
+    # print(f"   - API docs: {public_url}/docs")
+    # print(f"   - Calls init: {public_url}/calls/init")
     print("=" * 60)
     print("  - Auto-reload: Enabled (server will restart on code changes)")
     print("  - Press CTRL+C to stop the server and ngrok tunnel")
@@ -200,7 +200,7 @@ if __name__ == "__main__":
     
     # Register cleanup function to close ngrok tunnel on exit
     def cleanup():
-        ngrok.kill()
+        # ngrok.kill()
         print("\n✅ Ngrok tunnel closed")
     
     atexit.register(cleanup)
