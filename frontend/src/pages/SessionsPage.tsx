@@ -1,9 +1,10 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Plus, Car, MapPin, Calendar } from "lucide-react";
+import { Plus, Car, MapPin, Calendar, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "../lib/utils";
+import type { Id } from "../../convex/_generated/dataModel";
 
 export const SessionsPage = () => {
   const { user } = useAuth0();
@@ -84,6 +85,22 @@ interface SessionCardProps {
 }
 
 const SessionCard = ({ session, onClick }: SessionCardProps) => {
+  const deleteSession = useMutation(api.sessions.remove);
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+
+    if (
+      confirm(`Delete this search for ${session.model} ${session.version}?`)
+    ) {
+      try {
+        await deleteSession({ id: session._id as Id<"sessions"> });
+      } catch (error) {
+        console.error("Failed to delete session:", error);
+        alert("Failed to delete session. Please try again.");
+      }
+    }
+  };
   const getStatusColor = (status: string) => {
     switch (status) {
       case "draft":
@@ -102,25 +119,34 @@ const SessionCard = ({ session, onClick }: SessionCardProps) => {
   };
 
   return (
-    <div
-      onClick={onClick}
-      className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
-    >
+    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-3">
-        <div>
+        <div onClick={onClick} className="flex-1 cursor-pointer">
           <h3 className="font-bold text-lg text-functional-gray">
             {session.model} {session.version}
           </h3>
           <p className="text-sm text-gray-600 capitalize">{session.carType}</p>
         </div>
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(session.status)}`}
-        >
-          {session.status}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(session.status)}`}
+          >
+            {session.status}
+          </span>
+          <button
+            onClick={handleDelete}
+            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Delete session"
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
       </div>
 
-      <div className="flex items-center gap-4 text-sm text-gray-600">
+      <div
+        onClick={onClick}
+        className="flex items-center gap-4 text-sm text-gray-600 cursor-pointer"
+      >
         <div className="flex items-center gap-1">
           <MapPin size={14} />
           <span>{session.zipCode}</span>

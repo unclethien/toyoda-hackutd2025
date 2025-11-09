@@ -54,8 +54,7 @@ export const fetchDealers = action({
       });
 
       // 3. Call Go backend
-      const backendUrl =
-        process.env.VITE_BACKEND_URL || "http://localhost:8080";
+      const backendUrl = process.env.BACKEND_URL || "http://localhost:8080";
       const response = await fetch(`${backendUrl}/api/dealers/search`, {
         method: "POST",
         headers: {
