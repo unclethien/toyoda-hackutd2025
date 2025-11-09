@@ -329,12 +329,11 @@ export function ListingsTable({ listings, sessionId }: ListingsTableProps) {
                         </div>
                         
                         <div>
-                          <div className="text-sm font-medium text-muted-foreground">Pricing</div>
+                          <div className="text-sm font-medium text-muted-foreground">MSRP</div>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-sm line-through text-muted-foreground">
                               {formatCurrency(listing.msrp)}
                             </span>
-                            <span className="text-sm">MSRP</span>
                           </div>
                         </div>
                       </div>
