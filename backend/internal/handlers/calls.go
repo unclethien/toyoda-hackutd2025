@@ -178,3 +178,59 @@ func callAgentService(requests []AgentCallRequest) (interface{}, error) {
 	log.Printf("Successfully initiated calls with agent service")
 	return agentResponse, nil
 }
+
+// CallFinishRequest represents the request from agent service when a call is finished
+type CallFinishRequest struct {
+	UserID      string `json:"user_id"`
+	IsAvailable bool   `json:"is_available"`
+	DealPrice   int    `json:"deal_price"`
+	Remarks     string `json:"remarks"`
+}
+
+// CallFinishResponse represents the response to the agent service
+type CallFinishResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+// FinishCall handles POST /api/calls/finish
+// Receives notification from agent service when a call is completed
+func FinishCall(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Parse request body
+	var request CallFinishRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		log.Printf("Error decoding call finish request: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(CallFinishResponse{
+			Success: false,
+			Message: fmt.Sprintf("Invalid request body: %v", err),
+		})
+		return
+	}
+
+	// Validate required fields
+	if request.UserID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(CallFinishResponse{
+			Success: false,
+			Message: "user_id is required",
+		})
+		return
+	}
+
+	// Log the call completion details
+	log.Printf("Call finished - UserID: %s, IsAvailable: %t, DealPrice: %d, Remarks: %s",
+		request.UserID, request.IsAvailable, request.DealPrice, request.Remarks)
+
+	// TODO: Store this information in a persistent data structure
+	// For now, just log and acknowledge receipt
+
+	// Return success response
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(CallFinishResponse{
+		Success: true,
+		Message: "Call completion recorded successfully",
+	})
+}

@@ -163,7 +163,7 @@ async def calls_webhook(request: Request):
             remarks=text_transcript
         )
         print(f"Calling backend with body: {calls_finish_body.model_dump()}")
-        response = requests.post(f"{BACKEND_URL}/calls/finish", json=calls_finish_body.model_dump())
+        response = requests.post(f"{BACKEND_URL}/api/calls/finish", json=calls_finish_body.model_dump())
         if response.status_code != 200:
             return {"status": "error", "message": "Failed to call backend"}
         return {"status": "success", "message": "Backend called successfully"}
@@ -174,7 +174,7 @@ async def calls_webhook(request: Request):
             deal_price=0,
             remarks="Call initiation failed"
         )
-        response = requests.post(f"{BACKEND_URL}/calls/finish", json=calls_finish_body.model_dump())
+        response = requests.post(f"{BACKEND_URL}/api/calls/finish", json=calls_finish_body.model_dump())
         if response.status_code != 200:
             return {"status": "error", "message": "Failed to call backend"}
         return {"status": "success", "message": "Backend called successfully"}

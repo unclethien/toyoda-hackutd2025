@@ -39,7 +39,7 @@ A FastAPI-based server that integrates with ElevenLabs Conversational AI to init
    ELEVENLABS_WEBHOOK_SECRET=your_webhook_secret
    
    # Backend Configuration
-   BACKEND_URL=https://your-backend-api.com
+   BACKEND_URL=http://localhost:8080
    
    # Optional: Ngrok Auth Token (for paid accounts)
    NGROK_AUTH_TOKEN=your_ngrok_auth_token
@@ -53,7 +53,7 @@ A FastAPI-based server that integrates with ElevenLabs Conversational AI to init
 | `ELEVENLABS_AGENT_ID` | Yes | The ID of your ElevenLabs conversational AI agent |
 | `ELEVENLABS_AGENT_PHONE_NUMBER_ID` | Yes | The phone number ID for making calls |
 | `ELEVENLABS_WEBHOOK_SECRET` | Yes | Secret key for validating webhook signatures |
-| `BACKEND_URL` | Yes | Base URL of your backend API |
+| `BACKEND_URL` | Yes | Base URL of your backend API (e.g., `http://localhost:8080` for local development) |
 | `NGROK_AUTH_TOKEN` | No | Ngrok authentication token (for paid accounts) |
 
 ## Running the Server
