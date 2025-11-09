@@ -2,3 +2,7 @@
 docs/*
 plans/*
 CLAUDE.md
+
+#add all md file but exclude README.md
+*.md
+!README.md

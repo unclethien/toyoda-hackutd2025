@@ -1,0 +1,153 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --color-toyoda-red: #eb0a1e;
+  --color-functional-gray: #58595b;
+
+  --font-family-roboto: Roboto, sans-serif;
+  --font-family-open-sans: "Open Sans", sans-serif;
+}
+
+:root {
+  --toyoda-red: #eb0a1e;
+  --functional-gray: #58595b;
+  --white: #ffffff;
+  --black: #000000;
+}
+
+body {
+  font-family: "Roboto", "Open Sans", sans-serif;
+  color: var(--functional-gray);
+  background-color: var(--functional-gray);
+  min-height: 100vh;
+}
+
+* {
+  transition: all 0.2s ease-in-out;
+}
+
+button,
+a,
+input,
+select,
+textarea,
+.card,
+.interactive {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out,
+    background-color 0.2s ease-in-out, border-color 0.2s ease-in-out,
+    color 0.2s ease-in-out;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+button:focus,
+input:focus {
+  outline: 2px solid var(--toyoda-red);
+  outline-offset: 2px;
+  transform: scale(1.005);
+}
+
+.text-toyoda-red {
+  color: var(--toyoda-red);
+}
+
+.bg-toyoda-red {
+  background-color: var(--toyoda-red);
+}
+
+.border-toyota-red {
+  border-color: var(--toyoda-red);
+}
+
+.btn-primary {
+  background-color: var(--toyoda-red);
+  color: var(--white);
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary:hover {
+  background-color: #d10a1b;
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.hero {
+  position: relative;
+  height: 650px;
+  background-color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero-image {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  left: 0;
+  top: 0;
+  opacity: 0.7;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0 1rem;
+}
+
+.input-expanded {
+  max-height: 500px;
+  opacity: 1;
+  visibility: visible;
+}
+
+.input-collapsed {
+  max-height: 0;
+  opacity: 0;
+  visibility: hidden;
+}
+
+@media (max-width: 767px) {
+  .hero {
+    height: 450px;
+  }
+
+  .hero-content h1 {
+    font-size: 2.5rem;
+  }
+
+  .btn-primary {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .nav-links nav a,
+  .nav-links nav button {
+    font-size: 1rem;
+  }
+}
