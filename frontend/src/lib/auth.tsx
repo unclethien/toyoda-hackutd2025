@@ -1,5 +1,5 @@
 import { Auth0Provider } from "@auth0/auth0-react";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 
 // Auth0 configuration
 const domain = import.meta.env.VITE_AUTH0_DOMAIN;

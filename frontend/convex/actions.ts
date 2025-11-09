@@ -2,7 +2,7 @@
 import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { api } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 
 // Types for the backend response
 interface DealerResponse {
@@ -54,7 +54,8 @@ export const fetchDealers = action({
       });
 
       // 3. Call Go backend
-      const backendUrl = process.env.BACKEND_URL || "http://localhost:8080";
+      // Note: Convex environment variables are configured via `npx convex env set`
+      const backendUrl = "http://localhost:8080";
       const response = await fetch(`${backendUrl}/api/dealers/search`, {
         method: "POST",
         headers: {
