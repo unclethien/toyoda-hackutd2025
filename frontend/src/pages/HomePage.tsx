@@ -32,7 +32,7 @@ export const HomePage = () => {
         {/* Hero Section */}
         <div className="space-y-4">
           <div className="flex justify-center">
-            <Logo size={144} className="mb-4" />
+            <Logo size={280} className="mb-4" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold">TOYODA</h1>
           <p className="text-lg text-muted-foreground">
