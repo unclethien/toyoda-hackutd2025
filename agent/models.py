@@ -7,11 +7,14 @@ class DealerQuery(BaseModel):
     """Dealer query with car information and phone number."""
     make: str
     model: str
-    year: str
+    year: int
     zipcode: str
     dealer_name: str
-    msrp: str
-    listing_price: str
+    msrp: int
+    listing_price: int
+    is_dealing: bool
+    competing_price: int | None
+    
     phone_number: str
     user_id: str
 

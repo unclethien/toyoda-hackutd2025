@@ -19,7 +19,8 @@ load_dotenv()
 
 # ElevenLabs API configuration from environment variables
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-ELEVENLABS_AGENT_ID = os.getenv("ELEVENLABS_AGENT_ID")
+ELEVENLABS_FIRST_CALL_AGENT_ID = os.getenv("ELEVENLABS_FIRST_CALL_AGENT_ID")
+ELEVENLABS_NEGOTIATING_AGENT_ID = os.getenv("ELEVENLABS_NEGOTIATING_AGENT_ID")
 ELEVENLABS_AGENT_PHONE_NUMBER_ID = os.getenv("ELEVENLABS_AGENT_PHONE_NUMBER_ID")
 ELEVENLABS_WEBHOOK_SECRET = os.getenv("ELEVENLABS_WEBHOOK_SECRET")
 BACKEND_URL = os.getenv("BACKEND_URL")
@@ -83,7 +84,7 @@ async def call_dealers(queries: List[DealerQuery]) -> Dict[str, Any]:
     # Transform DealerQuery list to ElevenLabs format
     recipients = []
     for query in queries:
-        recipients.append({
+        recipient_data = {
             "conversation_initiation_client_data": {
                 "user_id": query.user_id,
                 "dynamic_variables": {
@@ -97,13 +98,19 @@ async def call_dealers(queries: List[DealerQuery]) -> Dict[str, Any]:
                 }
             },
             "phone_number": query.phone_number
-        })
+        }
+        if query.is_dealing:
+            recipient_data["conversation_initiation_client_data"]["dynamic_variables"]["competing_price"] = query.competing_price
+        recipients.append(recipient_data)
     
     try:
         # Use ElevenLabs SDK to create batch calls
+        agent_id = ELEVENLABS_FIRST_CALL_AGENT_ID \
+            if not queries[0].is_dealing \
+            else ELEVENLABS_NEGOTIATING_AGENT_ID
         response = elevenlabs_client.conversational_ai.batch_calls.create(
             call_name="toYoda",
-            agent_id=ELEVENLABS_AGENT_ID,
+            agent_id=agent_id,
             agent_phone_number_id=ELEVENLABS_AGENT_PHONE_NUMBER_ID,
             recipients=recipients
         )
