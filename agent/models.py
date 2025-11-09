@@ -34,6 +34,11 @@ class WebhookPayload(BaseModel):
     type: str
     data: WebhookData
 
+class TranscriptSummary(BaseModel):
+    is_available: bool
+    deal_price: int
+    remarks: str
+
 class CallsFinishBody(BaseModel):
     user_id: str
     is_available: bool

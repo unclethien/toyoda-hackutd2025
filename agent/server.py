@@ -11,8 +11,8 @@ from dotenv import load_dotenv
 from elevenlabs import ElevenLabs
 import requests
 from models import CallsFinishBody, DealerQuery, WebhookPayload, WebhookType
-import hmac
-from hashlib import sha256
+from utils import verify_elevenlabs_signature
+from process_transcript import process_transcript
 
 # Load environment variables from .env file
 load_dotenv()
@@ -121,52 +121,31 @@ async def call_dealers(queries: List[DealerQuery]) -> Dict[str, Any]:
 
 @app.post("/calls/webhook")
 async def calls_webhook(request: Request):
-    # with open("webhook_request.txt", "a") as f:
-    #     f.write(f"Headers: {dict(request.headers)}\n")
-    #     body = await request.body()
-    #     f.write(f"Body: {body.decode('utf-8')}\n\n")
-    #     print("Webhoook recorded in webhook_request.txt")
     payload = await request.body()
-    headers = request.headers.get("elevenlabs-signature")
-    if headers is None:
-        return
-    timestamp = headers.split(",")[0][2:]
-    hmac_signature = headers.split(",")[1]
-    # Validate timestamp
-    tolerance = int(time.time()) - 30 * 60
-    if int(timestamp) < tolerance:
-        return
-    # Validate signature
-    full_payload_to_sign = f"{timestamp}.{payload.decode('utf-8')}"
-    mac = hmac.new(
-        key=ELEVENLABS_WEBHOOK_SECRET.encode("utf-8"),
-        msg=full_payload_to_sign.encode("utf-8"),
-        digestmod=sha256,
-    )
-    digest = 'v0=' + mac.hexdigest()
-    if hmac_signature != digest:
-        print(f"Invalid signature: {hmac_signature} != {digest}")
+    signature_header = request.headers.get("elevenlabs-signature")
+    
+    # Verify signature
+    if not verify_elevenlabs_signature(payload, signature_header, ELEVENLABS_WEBHOOK_SECRET):
         return {"status": "error", "message": "Invalid signature"}
-    # Continue processing
-    # print(f"Received webhook: {payload.decode('utf-8')}")
 
     # Processing the webhook
     typed_payload = WebhookPayload.model_validate_json(payload.decode('utf-8'))
     print(f"webhook type: {typed_payload.type}")
     if typed_payload.type == WebhookType.POST_CALL_TRANSCRIPTION:
         # call backend at /calls/finish
-        text_transcript = "\n".join([f"{turn['role'].capitalize()}: {turn['message']}" for turn in typed_payload.data.transcript])
+        transcript_summary = process_transcript(typed_payload.data.transcript)
         calls_finish_body = CallsFinishBody(
             user_id=typed_payload.data.user_id,
-            is_available=True,
-            deal_price=typed_payload.data.conversation_initiation_client_data['dynamic_variables']['listing_price'],
-            remarks=text_transcript
+            is_available=transcript_summary.is_available,
+            deal_price=transcript_summary.deal_price,
+            remarks=transcript_summary.remarks
         )
         print(f"Calling backend with body: {calls_finish_body.model_dump()}")
         response = requests.post(f"{BACKEND_URL}/api/calls/finish", json=calls_finish_body.model_dump())
         if response.status_code != 200:
             return {"status": "error", "message": "Failed to call backend"}
         return {"status": "success", "message": "Backend called successfully"}
+    
     elif typed_payload.type == WebhookType.CALL_INITIATION_FAILURE:
         calls_finish_body = CallsFinishBody(
             user_id=typed_payload.data.user_id,
@@ -178,6 +157,7 @@ async def calls_webhook(request: Request):
         if response.status_code != 200:
             return {"status": "error", "message": "Failed to call backend"}
         return {"status": "success", "message": "Backend called successfully"}
+    
     else:
         return {"status": "error", "message": "Invalid webhook type"}
 
