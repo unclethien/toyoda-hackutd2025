@@ -28,15 +28,17 @@ type CallSubmitRequest struct {
 
 // AgentCallRequest represents the request to send to the agent service
 type AgentCallRequest struct {
-	CallID       string `json:"user_id"`
-	Make         string `json:"make"`
-	Model        string `json:"model"`
-	Year         string `json:"year"`
-	ZipCode      string `json:"zipcode"`
-	DealerName   string `json:"dealer_name"`
-	PhoneNumber  string `json:"phone_number"`
-	MSRP         string `json:"msrp"`
-	ListingPrice string `json:"listing_price"`
+	CallID         string `json:"user_id"`
+	Make           string `json:"make"`
+	Model          string `json:"model"`
+	Year           string `json:"year"`
+	ZipCode        string `json:"zipcode"`
+	DealerName     string `json:"dealer_name"`
+	PhoneNumber    string `json:"phone_number"`
+	MSRP           string `json:"msrp"`
+	ListingPrice   string `json:"listing_price"`
+	IsDealing      bool   `json:"is_dealing,omitempty"`
+	CompetingPrice int    `json:"competing_price,omitempty"`
 }
 
 // CallSubmitResponse represents the response from the agent service
@@ -90,19 +92,42 @@ func SubmitCalls(w http.ResponseWriter, r *http.Request) {
 	// Transform requests and add generated fields
 	agentRequests := make([]AgentCallRequest, len(requests))
 	for i, req := range requests {
-		agentRequests[i] = AgentCallRequest{
-			CallID:       generateUserID(),
-			Make:         "toyota", // Constant as specified
-			Model:        req.Model,
-			Year:         strconv.Itoa(req.Year),
-			ZipCode:      req.ZipCode,
-			DealerName:   req.DealerName,
-			PhoneNumber:  req.PhoneNumber,
-			MSRP:         strconv.FormatInt(req.MSRP, 10),
-			ListingPrice: strconv.FormatInt(req.ListingPrice, 10),
+		callID := generateUserID()
+
+		// Check for existing deals for the same car
+		bestPrice, hasExistingDeal, err := database.GetBestDealForCar(req.Model, req.Year, req.ZipCode)
+		isDealing := false
+		competingPrice := 0
+
+		if err != nil {
+			log.Printf("⚠️  Warning: Failed to check for existing deals: %v", err)
+		} else if hasExistingDeal {
+			isDealing = true
+			competingPrice = int(bestPrice)
+			log.Printf("💰 Found existing deal for %s %d in %s: $%d", req.Model, req.Year, req.ZipCode, competingPrice)
 		}
-		log.Printf("Generated call request %d: user_id=%s, dealer=%s, phone=%s, model=%s %d",
-			i+1, agentRequests[i].CallID, req.DealerName, req.PhoneNumber, req.Model, req.Year)
+
+		agentRequests[i] = AgentCallRequest{
+			CallID:         callID,
+			Make:           "toyota", // Constant as specified
+			Model:          req.Model,
+			Year:           strconv.Itoa(req.Year),
+			ZipCode:        req.ZipCode,
+			DealerName:     req.DealerName,
+			PhoneNumber:    req.PhoneNumber,
+			MSRP:           strconv.FormatInt(req.MSRP, 10),
+			ListingPrice:   strconv.FormatInt(req.ListingPrice, 10),
+			IsDealing:      isDealing,
+			CompetingPrice: competingPrice,
+		}
+
+		if isDealing {
+			log.Printf("Generated call request %d: user_id=%s, dealer=%s, phone=%s, model=%s %d, competing_price=$%d",
+				i+1, callID, req.DealerName, req.PhoneNumber, req.Model, req.Year, competingPrice)
+		} else {
+			log.Printf("Generated call request %d: user_id=%s, dealer=%s, phone=%s, model=%s %d (no existing deals)",
+				i+1, callID, req.DealerName, req.PhoneNumber, req.Model, req.Year)
+		}
 
 		// Store call in database
 		if err := database.CreateCall(req.UserID, agentRequests[i].CallID, req.Model, req.Year, req.ZipCode, req.DealerName, req.PhoneNumber, req.MSRP, req.ListingPrice); err != nil {

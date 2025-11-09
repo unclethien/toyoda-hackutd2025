@@ -173,3 +173,36 @@ func GetCallsByStatus(status string) ([]Call, error) {
 
 	return calls, rows.Err()
 }
+
+// GetBestDealForCar finds the best (lowest) deal price for a specific car
+// Returns the lowest deal_price and true if found, or 0 and false if no deals exist
+func GetBestDealForCar(model string, year int, zipcode string) (int64, bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT MIN(deal_price) as best_price
+		FROM calls
+		WHERE model = $1 
+		  AND year = $2 
+		  AND zipcode = $3 
+		  AND status = 'completed'
+		  AND is_available = true
+		  AND deal_price IS NOT NULL
+		  AND deal_price > 0
+	`
+
+	var bestPrice *int64
+	err := Pool.QueryRow(ctx, query, model, year, zipcode).Scan(&bestPrice)
+
+	if err != nil {
+		return 0, false, err
+	}
+
+	// If no deals found, bestPrice will be nil
+	if bestPrice == nil {
+		return 0, false, nil
+	}
+
+	return *bestPrice, true, nil
+}
