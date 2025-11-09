@@ -2,6 +2,8 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { Phone, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const HomePage = () => {
   const { isAuthenticated, loginWithRedirect, isLoading } = useAuth0();
@@ -28,40 +30,43 @@ export const HomePage = () => {
         {/* Hero Section */}
         <div className="space-y-4">
           <div className="flex justify-center">
-            <Phone size={64} className="text-toyoda-red" />
+            <Phone className="h-16 w-16 text-primary" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold">TOYODA</h1>
-          <p className="text-lg text-gray-700">
+          <p className="text-lg text-muted-foreground">
             Automated dealer outreach for the best car prices
           </p>
         </div>
 
         {/* Features */}
-        <div className="bg-white rounded-lg p-6 space-y-4 text-left">
-          <Feature
-            title="Search Any Car"
-            description="Enter your desired model, type, and location"
-          />
-          <Feature
-            title="AI Calls Dealers"
-            description="Our AI contacts all dealers in your area automatically"
-          />
-          <Feature
-            title="Compare Quotes"
-            description="Get the best out-the-door prices in one place"
-          />
-        </div>
+        <Card className="w-full">
+          <CardContent className="pt-6 space-y-4 text-left">
+            <Feature
+              title="Search Any Car"
+              description="Enter your desired model, type, and location"
+            />
+            <Feature
+              title="AI Calls Dealers"
+              description="Our AI contacts all dealers in your area automatically"
+            />
+            <Feature
+              title="Compare Quotes"
+              description="Get the best out-the-door prices in one place"
+            />
+          </CardContent>
+        </Card>
 
         {/* CTA Button */}
-        <button
+        <Button
           onClick={() => loginWithRedirect()}
-          className="w-full bg-toyoda-red text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg"
+          size="lg"
+          className="w-full text-lg"
         >
           Get Started
-          <ArrowRight size={24} />
-        </button>
+          <ArrowRight className="h-5 w-5" />
+        </Button>
 
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-muted-foreground">
           Free to use • No credit card required
         </p>
       </div>
@@ -76,10 +81,10 @@ interface FeatureProps {
 
 const Feature = ({ title, description }: FeatureProps) => (
   <div className="flex gap-3">
-    <div className="shrink-0 w-2 h-2 bg-toyoda-red rounded-full mt-2" />
+    <div className="shrink-0 w-2 h-2 bg-primary rounded-full mt-2" />
     <div>
-      <h3 className="font-bold text-functional-gray">{title}</h3>
-      <p className="text-sm text-gray-600">{description}</p>
+      <h3 className="font-bold text-foreground">{title}</h3>
+      <p className="text-sm text-muted-foreground">{description}</p>
     </div>
   </div>
 );

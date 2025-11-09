@@ -1,3 +1,6 @@
 {
-  "allowedUrls": ["http://localhost:8080", "https://*.carfax.com"]
+  "allowedUrls": [
+    "http://localhost:8080",
+    "https://*.carfax.com"
+  ]
 }

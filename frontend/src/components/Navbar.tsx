@@ -3,10 +3,14 @@ import { LogOut, Menu, X } from "lucide-react";
 import { Logo } from "./Logo";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Button } from "./ui/button";
 
 export const Navbar = () => {
   const { isAuthenticated, logout, user } = useAuth0();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Display name priority: name > nickname > email
+  const displayName = user?.name || user?.nickname || user?.email;
 
   return (
     <nav className="sticky top-0 z-50 bg-white shadow-md">
@@ -22,48 +26,59 @@ export const Navbar = () => {
           <div className="hidden md:flex items-center gap-4">
             {isAuthenticated && (
               <>
-                <span className="text-sm text-functional-gray truncate max-w-[200px]">
-                  {user?.email}
+                <span className="text-sm text-muted-foreground truncate max-w-[200px]">
+                  {displayName}
                 </span>
-                <button
-                  onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-functional-gray hover:text-toyoda-red transition-colors"
+                <Button
+                  onClick={() =>
+                    logout({
+                      logoutParams: { returnTo: window.location.origin },
+                    })
+                  }
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-primary"
                 >
-                  <LogOut size={18} />
+                  <LogOut className="h-4 w-4" />
                   Logout
-                </button>
+                </Button>
               </>
             )}
           </div>
 
           {/* Mobile Menu Button */}
           {isAuthenticated && (
-            <button
+            <Button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-functional-gray hover:text-toyoda-red"
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
             >
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
           )}
         </div>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && isAuthenticated && (
-          <div className="md:hidden mt-4 pt-4 border-t border-gray-200">
+          <div className="md:hidden mt-4 pt-4 border-t border-border">
             <div className="flex flex-col gap-3">
-              <div className="text-sm text-functional-gray px-2 truncate">
-                {user?.email}
+              <div className="text-sm text-muted-foreground px-2 truncate">
+                {displayName}
               </div>
-              <button
+              <Button
                 onClick={() => {
-                  logout({ logoutParams: { returnTo: window.location.origin } });
+                  logout({
+                    logoutParams: { returnTo: window.location.origin },
+                  });
                   setMobileMenuOpen(false);
                 }}
-                className="flex items-center gap-2 px-2 py-2 text-sm text-functional-gray hover:text-toyoda-red transition-colors"
+                variant="ghost"
+                className="justify-start text-muted-foreground hover:text-primary"
               >
-                <LogOut size={18} />
+                <LogOut className="h-4 w-4" />
                 Logout
-              </button>
+              </Button>
             </div>
           </div>
         )}

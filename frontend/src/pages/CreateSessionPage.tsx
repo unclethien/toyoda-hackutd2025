@@ -5,6 +5,16 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Search } from "lucide-react";
 import { carDatabase } from "../data/carData";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const CreateSessionPage = () => {
   const { user } = useAuth0();
@@ -123,18 +133,20 @@ export const CreateSessionPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-4">
-        <button
+      <div className="bg-card border-b border-border px-4 py-4">
+        <Button
           onClick={() => navigate("/sessions")}
-          className="flex items-center gap-2 text-functional-gray hover:text-toyoda-red mb-3"
+          variant="ghost"
+          size="sm"
+          className="mb-3"
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft className="h-4 w-4" />
           Back
-        </button>
-        <h1 className="text-2xl font-bold text-functional-gray">
+        </Button>
+        <h1 className="text-2xl font-bold text-foreground">
           New Car Search
         </h1>
-        <p className="text-sm text-gray-600 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Enter details for your car search
         </p>
       </div>
@@ -142,85 +154,91 @@ export const CreateSessionPage = () => {
       {/* Form */}
       <form onSubmit={handleSubmit} className="p-4 space-y-4">
         {/* Make (Manufacturer) */}
-        <div>
-          <label className="block text-sm font-semibold text-functional-gray mb-2">
+        <div className="space-y-2">
+          <Label htmlFor="make">
             Make *
-          </label>
-          <select
+          </Label>
+          <Select
             value={formData.make}
-            onChange={(e) => handleMakeChange(e.target.value)}
-            className={`w-full px-4 py-3 rounded-lg border ${errors.make ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-toyoda-red`}
+            onValueChange={handleMakeChange}
           >
-            <option value="">Select make</option>
-            {carDatabase.map((make) => (
-              <option key={make.name} value={make.name}>
-                {make.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="make" className={errors.make ? "border-destructive" : ""}>
+              <SelectValue placeholder="Select make" />
+            </SelectTrigger>
+            <SelectContent>
+              {carDatabase.map((make) => (
+                <SelectItem key={make.name} value={make.name}>
+                  {make.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {errors.make && (
-            <p className="text-red-500 text-sm mt-1">{errors.make}</p>
+            <p className="text-destructive text-sm">{errors.make}</p>
           )}
         </div>
 
         {/* Model */}
-        <div>
-          <label className="block text-sm font-semibold text-functional-gray mb-2">
+        <div className="space-y-2">
+          <Label htmlFor="model">
             Model *
-          </label>
-          <select
+          </Label>
+          <Select
             value={formData.model}
-            onChange={(e) => handleModelChange(e.target.value)}
+            onValueChange={handleModelChange}
             disabled={!formData.make}
-            className={`w-full px-4 py-3 rounded-lg border ${errors.model ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-toyoda-red disabled:bg-gray-100 disabled:cursor-not-allowed`}
           >
-            <option value="">
-              {formData.make ? "Select model" : "Select make first"}
-            </option>
-            {availableModels.map((model) => (
-              <option key={model.name} value={model.name}>
-                {model.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="model" className={errors.model ? "border-destructive" : ""} disabled={!formData.make}>
+              <SelectValue placeholder={formData.make ? "Select model" : "Select make first"} />
+            </SelectTrigger>
+            <SelectContent>
+              {availableModels.map((model) => (
+                <SelectItem key={model.name} value={model.name}>
+                  {model.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {errors.model && (
-            <p className="text-red-500 text-sm mt-1">{errors.model}</p>
+            <p className="text-destructive text-sm">{errors.model}</p>
           )}
         </div>
 
         {/* Version/Trim */}
-        <div>
-          <label className="block text-sm font-semibold text-functional-gray mb-2">
+        <div className="space-y-2">
+          <Label htmlFor="version">
             Version/Trim *
-          </label>
-          <select
+          </Label>
+          <Select
             value={formData.version}
-            onChange={(e) =>
-              setFormData({ ...formData, version: e.target.value })
+            onValueChange={(value) =>
+              setFormData({ ...formData, version: value })
             }
             disabled={!formData.model}
-            className={`w-full px-4 py-3 rounded-lg border ${errors.version ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-toyoda-red disabled:bg-gray-100 disabled:cursor-not-allowed`}
           >
-            <option value="">
-              {formData.model ? "Select version" : "Select model first"}
-            </option>
-            {availableVersions.map((version) => (
-              <option key={version} value={version}>
-                {version}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="version" className={errors.version ? "border-destructive" : ""} disabled={!formData.model}>
+              <SelectValue placeholder={formData.model ? "Select version" : "Select model first"} />
+            </SelectTrigger>
+            <SelectContent>
+              {availableVersions.map((version) => (
+                <SelectItem key={version} value={version}>
+                  {version}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {errors.version && (
-            <p className="text-red-500 text-sm mt-1">{errors.version}</p>
+            <p className="text-destructive text-sm">{errors.version}</p>
           )}
         </div>
 
         {/* ZIP Code */}
-        <div>
-          <label className="block text-sm font-semibold text-functional-gray mb-2">
+        <div className="space-y-2">
+          <Label htmlFor="zipCode">
             ZIP Code *
-          </label>
-          <input
+          </Label>
+          <Input
+            id="zipCode"
             type="text"
             placeholder="75007"
             maxLength={5}
@@ -228,19 +246,20 @@ export const CreateSessionPage = () => {
             onChange={(e) =>
               setFormData({ ...formData, zipCode: e.target.value })
             }
-            className={`w-full px-4 py-3 rounded-lg border ${errors.zipCode ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-toyoda-red`}
+            className={errors.zipCode ? "border-destructive" : ""}
           />
           {errors.zipCode && (
-            <p className="text-red-500 text-sm mt-1">{errors.zipCode}</p>
+            <p className="text-destructive text-sm">{errors.zipCode}</p>
           )}
         </div>
 
         {/* Radius */}
-        <div>
-          <label className="block text-sm font-semibold text-functional-gray mb-2">
+        <div className="space-y-2">
+          <Label htmlFor="radius">
             Search Radius: {formData.radiusMiles} miles
-          </label>
+          </Label>
           <input
+            id="radius"
             type="range"
             min="0"
             max="50"
@@ -251,24 +270,25 @@ export const CreateSessionPage = () => {
             }
             className="w-full"
           />
-          <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <div className="flex justify-between text-xs text-muted-foreground">
             <span>0 miles</span>
             <span>50 miles</span>
           </div>
           {errors.radiusMiles && (
-            <p className="text-red-500 text-sm mt-1">{errors.radiusMiles}</p>
+            <p className="text-destructive text-sm">{errors.radiusMiles}</p>
           )}
         </div>
 
         {/* Submit Button */}
-        <button
+        <Button
           type="submit"
           disabled={isSubmitting}
-          className="w-full bg-toyoda-red text-white py-4 px-6 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-opacity-90 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed mt-8"
+          size="lg"
+          className="w-full mt-8"
         >
-          <Search size={24} />
+          <Search className="h-5 w-5" />
           {loadingMessage || (isSubmitting ? "Searching..." : "Search Dealers")}
-        </button>
+        </Button>
       </form>
     </div>
   );

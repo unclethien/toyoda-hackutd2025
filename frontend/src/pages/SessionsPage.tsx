@@ -5,6 +5,9 @@ import { Plus, Car, MapPin, Calendar, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "../lib/utils";
 import type { Id } from "../../convex/_generated/dataModel";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export const SessionsPage = () => {
   const { user } = useAuth0();
@@ -18,11 +21,11 @@ export const SessionsPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-6">
-        <h1 className="text-2xl font-bold text-functional-gray">
+      <div className="bg-card border-b border-border px-4 py-6">
+        <h1 className="text-2xl font-bold text-foreground">
           My Car Searches
         </h1>
-        <p className="text-sm text-gray-600 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Manage your dealer outreach sessions
         </p>
       </div>
@@ -30,26 +33,27 @@ export const SessionsPage = () => {
       {/* Content */}
       <div className="p-4 space-y-4">
         {/* New Session Button */}
-        <button
+        <Button
           onClick={() => navigate("/sessions/new")}
-          className="w-full bg-toyoda-red text-white py-4 px-6 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-opacity-90 transition-all shadow-md"
+          size="lg"
+          className="w-full"
         >
-          <Plus size={24} />
+          <Plus className="h-5 w-5" />
           New Car Search
-        </button>
+        </Button>
 
         {/* Sessions List */}
         {!sessions && (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-muted-foreground">
             Loading your sessions...
           </div>
         )}
 
         {sessions && sessions.length === 0 && (
           <div className="text-center py-12">
-            <Car size={48} className="mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600">No car searches yet</p>
-            <p className="text-sm text-gray-500 mt-2">
+            <Car className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-foreground">No car searches yet</p>
+            <p className="text-sm text-muted-foreground mt-2">
               Create your first session to get started
             </p>
           </div>
@@ -104,58 +108,57 @@ const SessionCard = ({ session, onClick }: SessionCardProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "draft":
-        return "bg-gray-100 text-gray-700";
+        return "secondary";
       case "fetching":
-        return "bg-blue-100 text-blue-700";
+        return "default";
       case "ready":
-        return "bg-green-100 text-green-700";
+        return "default";
       case "calling":
-        return "bg-yellow-100 text-yellow-700";
+        return "default";
       case "completed":
-        return "bg-purple-100 text-purple-700";
+        return "default";
       default:
-        return "bg-gray-100 text-gray-700";
+        return "secondary";
     }
   };
 
   return (
-    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start mb-3">
-        <div onClick={onClick} className="flex-1 cursor-pointer">
-          <h3 className="font-bold text-lg text-functional-gray">
-            {session.model} {session.version}
-          </h3>
-          <p className="text-sm text-gray-600 capitalize">{session.carType}</p>
+    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={onClick}>
+      <CardContent className="p-4">
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex-1">
+            <h3 className="font-bold text-lg text-foreground">
+              {session.model} {session.version}
+            </h3>
+            <p className="text-sm text-muted-foreground capitalize">{session.carType}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant={getStatusColor(session.status) as any}>
+              {session.status}
+            </Badge>
+            <Button
+              onClick={handleDelete}
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              title="Delete session"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(session.status)}`}
-          >
-            {session.status}
-          </span>
-          <button
-            onClick={handleDelete}
-            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            title="Delete session"
-          >
-            <Trash2 size={18} />
-          </button>
-        </div>
-      </div>
 
-      <div
-        onClick={onClick}
-        className="flex items-center gap-4 text-sm text-gray-600 cursor-pointer"
-      >
-        <div className="flex items-center gap-1">
-          <MapPin size={14} />
-          <span>{session.zipCode}</span>
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <MapPin className="h-3.5 w-3.5" />
+            <span>{session.zipCode}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Calendar className="h-3.5 w-3.5" />
+            <span>{formatDate(session.createdAt)}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Calendar size={14} />
-          <span>{formatDate(session.createdAt)}</span>
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
