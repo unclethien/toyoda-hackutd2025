@@ -44,18 +44,30 @@ export const SessionDetailPage = () => {
     sessionId ? { id: sessionId as Id<"sessions"> } : "skip"
   );
 
-  // Combine listings with call status and quote data
+  // Combine listings with call status and quote data, filter for unique dealer names
   const listingsWithStatus = listings && calls
-    ? listings.map((listing) => {
-        const call = calls.find((c) => c.listingId === listing._id);
-        const hasQuote = quotes?.some((q) => q.listingId === listing._id) || false;
-        return {
-          ...listing,
-          callStatus: call?.status,
-          callId: call?._id,
-          hasQuote,
-        };
-      })
+    ? (() => {
+        const allListingsWithStatus = listings.map((listing) => {
+          const call = calls.find((c) => c.listingId === listing._id);
+          const hasQuote = quotes?.some((q) => q.listingId === listing._id) || false;
+          return {
+            ...listing,
+            callStatus: call?.status,
+            callId: call?._id,
+            hasQuote,
+          };
+        });
+
+        // Filter to keep only unique dealer names (keep first occurrence)
+        const seenDealers = new Set<string>();
+        return allListingsWithStatus.filter((listing) => {
+          if (seenDealers.has(listing.dealerName)) {
+            return false;
+          }
+          seenDealers.add(listing.dealerName);
+          return true;
+        });
+      })()
     : [];
 
   // Combine quotes with dealer info for display
@@ -245,7 +257,7 @@ const FetchDealers = ({
       toast.loading("Searching for dealers...", { id: "fetch-dealers" });
 
       const result = await fetchDealers({ sessionId });
-      console.log("result", result);
+
       toast.success(
         `Found ${result.count} dealer${result.count !== 1 ? "s" : ""}!`,
         { id: "fetch-dealers" }
