@@ -125,3 +125,127 @@ export const fetchDealers = action({
     }
   },
 });
+
+// Types for ElevenLabs agent server
+interface DealerQuery {
+  make: string;
+  model: string;
+  year: string;
+  zipcode: string;
+  dealer_name: string;
+  msrp: string;
+  listing_price: string;
+  phone_number: string;
+  user_id: string;
+}
+
+/**
+ * Initiate batch calls via ElevenLabs agent server
+ */
+export const initiateBatchCalls = action({
+  args: {
+    sessionId: v.id("sessions"),
+    listingIds: v.array(v.id("listings")),
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
+    success: boolean;
+    callCount: number;
+    callIds: Id<"calls">[];
+  }> => {
+    try {
+      // 1. Get session data
+      const session = await ctx.runQuery(api.sessions.getById, {
+        id: args.sessionId,
+      });
+
+      if (!session) {
+        throw new Error("Session not found");
+      }
+
+      // 2. Get listings data
+      const listings = await Promise.all(
+        args.listingIds.map((id) =>
+          ctx.runQuery(api.listings.get, { id })
+        )
+      );
+
+      // Filter out nulls
+      const validListings = listings.filter((l) => l !== null);
+
+      if (validListings.length === 0) {
+        throw new Error("No valid listings found");
+      }
+
+      // 3. Update session status to "calling"
+      await ctx.runMutation(api.sessions.updateStatus, {
+        id: args.sessionId,
+        status: "calling",
+      });
+
+      // 4. Transform listings to DealerQuery format
+      const dealerQueries: DealerQuery[] = validListings.map((listing) => ({
+        make: session.carType.split(" ")[0], // e.g., "Toyota" from "Toyota RAV4"
+        model: session.model,
+        year: session.version, // Assuming version contains year info
+        zipcode: session.zipCode,
+        dealer_name: listing!.dealerName,
+        msrp: listing!.msrp.toString(),
+        listing_price: listing!.discountedPrice.toString(),
+        phone_number: listing!.phone,
+        user_id: session.userId,
+      }));
+
+      // 5. Call Python agent server
+      const agentServerUrl = "http://localhost:8000"; // TODO: Move to env var
+      const response = await fetch(`${agentServerUrl}/calls/init`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(dealerQueries),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Agent server error: ${response.status} ${response.statusText}`
+        );
+      }
+
+      // Parse response (currently unused, but available for future logging/tracking)
+      await response.json();
+
+      // 6. Create call records in database
+      const callIds: Id<"calls">[] = [];
+      for (const listing of validListings) {
+        const callId = await ctx.runMutation(api.calls.create, {
+          sessionId: args.sessionId,
+          listingId: listing!._id,
+          phone: listing!.phone,
+          scriptText: `Calling ${listing!.dealerName} for ${session.model} ${session.version}`,
+          dealerPromisedQuote: false,
+        });
+        callIds.push(callId);
+      }
+
+      return {
+        success: true,
+        callCount: validListings.length,
+        callIds,
+      };
+    } catch (error) {
+      // Update session status back to "ready" on error
+      await ctx.runMutation(api.sessions.updateStatus, {
+        id: args.sessionId,
+        status: "ready",
+      });
+
+      console.error("Failed to initiate batch calls:", error);
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to initiate batch calls"
+      );
+    }
+  },
+});

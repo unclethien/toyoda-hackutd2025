@@ -1,14 +1,17 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { ArrowLeft, Phone, CheckCircle2, Circle } from "lucide-react";
-import { formatCurrency, calculateSavings } from "../lib/utils";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/Logo";
+import { toast } from "sonner";
+import { ListingsTable } from "@/components/listings/ListingsTable";
+import type { Listing as ListingType } from "@/components/listings/ListingsTable";
+import { QuoteDisplay } from "@/components/quotes/QuoteDisplay";
 
 export const SessionDetailPage = () => {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -24,10 +27,46 @@ export const SessionDetailPage = () => {
     sessionId ? { sessionId: sessionId as Id<"sessions"> } : "skip"
   );
 
+  const calls = useQuery(
+    api.calls.listBySession,
+    sessionId ? { sessionId: sessionId as Id<"sessions"> } : "skip"
+  );
+
+  const quotes = useQuery(
+    api.quotes.listBySession,
+    sessionId ? { sessionId: sessionId as Id<"sessions"> } : "skip"
+  );
+
   const stats = useQuery(
     api.sessions.getStats,
     sessionId ? { id: sessionId as Id<"sessions"> } : "skip"
   );
+
+  // Combine listings with call status and quote data
+  const listingsWithStatus = listings && calls
+    ? listings.map((listing) => {
+        const call = calls.find((c) => c.listingId === listing._id);
+        const hasQuote = quotes?.some((q) => q.listingId === listing._id) || false;
+        return {
+          ...listing,
+          callStatus: call?.status,
+          callId: call?._id,
+          hasQuote,
+        };
+      })
+    : [];
+
+  // Combine quotes with dealer info for display
+  const quotesWithDealerInfo = quotes && listings
+    ? quotes.map((quote) => {
+        const listing = listings.find((l) => l._id === quote.listingId);
+        return {
+          ...quote,
+          dealerName: listing?.dealerName || "Unknown Dealer",
+          phone: listing?.phone || "",
+        };
+      })
+    : [];
 
   if (!session || !listings) {
     return (
@@ -75,7 +114,9 @@ export const SessionDetailPage = () => {
       <SessionStatus session={session} listings={listings} />
 
       {/* Content based on status */}
-      {session.status === "draft" && <FetchDealers session={session} />}
+      {session.status === "draft" && sessionId && (
+        <FetchDealers session={session} sessionId={sessionId as Id<"sessions">} />
+      )}
 
       {session.status === "fetching" && (
         <div className="p-4 text-center">
@@ -86,8 +127,23 @@ export const SessionDetailPage = () => {
 
       {(session.status === "ready" ||
         session.status === "calling" ||
-        session.status === "completed") && (
-        <DealersList listings={listings as Listing[]} status={session.status} />
+        session.status === "completed") && sessionId && (
+        <>
+          <div className="p-4">
+            <ListingsTable
+              listings={listingsWithStatus as ListingType[]}
+              sessionId={sessionId as Id<"sessions">}
+            />
+          </div>
+
+          {/* Quotes Section */}
+          {quotesWithDealerInfo.length > 0 && (
+            <div className="p-4 pt-0">
+              <h2 className="text-lg font-semibold mb-3">Received Quotes</h2>
+              <QuoteDisplay quotes={quotesWithDealerInfo as any} />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -107,7 +163,7 @@ const SessionStatus = ({
   listings,
 }: {
   session: { status: string };
-  listings: Listing[];
+  listings: ListingType[];
 }) => {
   const getStatusInfo = () => {
     switch (session.status) {
@@ -158,6 +214,7 @@ const SessionStatus = ({
 // Component to fetch dealers (when status is draft)
 const FetchDealers = ({
   session,
+  sessionId,
 }: {
   session: {
     model: string;
@@ -165,15 +222,31 @@ const FetchDealers = ({
     radiusMiles: number;
     zipCode: string;
   };
+  sessionId: Id<"sessions">;
 }) => {
+  const fetchDealers = useAction(api.actions.fetchDealers);
   const [isFetching, setIsFetching] = useState(false);
 
   const handleFetchDealers = async () => {
     setIsFetching(true);
-    // TODO: Call backend action to fetch from CARFAX API
-    // This will be implemented in Phase 4
-    alert("Backend integration coming in Phase 4!");
-    setIsFetching(false);
+    try {
+      toast.loading("Searching for dealers...", { id: "fetch-dealers" });
+
+      const result = await fetchDealers({ sessionId });
+
+      toast.success(
+        `Found ${result.count} dealer${result.count !== 1 ? "s" : ""}!`,
+        { id: "fetch-dealers" }
+      );
+    } catch (error) {
+      console.error("Failed to fetch dealers:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to fetch dealers. Please try again.",
+        { id: "fetch-dealers" }
+      );
+    } finally {
+      setIsFetching(false);
+    }
   };
 
   return (
@@ -201,161 +274,3 @@ const FetchDealers = ({
   );
 };
 
-// Component to show dealers list and initiate calls
-interface Listing {
-  _id: string;
-  dealerName: string;
-  phone: string;
-  address?: string;
-  msrp: number;
-  discountedPrice: number;
-  mpg: number;
-  distance?: number;
-  selected: boolean;
-}
-
-const DealersList = ({
-  listings,
-  status,
-}: {
-  listings: Listing[];
-  status: string;
-}) => {
-  const [selectedDealers, setSelectedDealers] = useState<Set<string>>(
-    new Set()
-  );
-
-  const toggleDealer = (dealerId: string) => {
-    const newSelected = new Set(selectedDealers);
-    if (newSelected.has(dealerId)) {
-      newSelected.delete(dealerId);
-    } else {
-      newSelected.add(dealerId);
-    }
-    setSelectedDealers(newSelected);
-  };
-
-  const handleInitiateCalls = async () => {
-    if (selectedDealers.size === 0) {
-      alert("Please select at least one dealer");
-      return;
-    }
-
-    // TODO: Call backend action to initiate ElevenLabs calls
-    // This will be implemented in Phase 5
-    alert(
-      `Will call ${selectedDealers.size} dealers (Phase 5 integration coming)`
-    );
-  };
-
-  return (
-    <div className="p-4 space-y-4">
-      {/* Action Button */}
-      {status === "ready" && (
-        <Button
-          onClick={handleInitiateCalls}
-          disabled={selectedDealers.size === 0}
-          size="lg"
-          className="w-full"
-        >
-          <Phone className="h-5 w-5" />
-          Call {selectedDealers.size > 0 ? `${selectedDealers.size} ` : ""}
-          Selected Dealers
-        </Button>
-      )}
-
-      {/* Dealers List */}
-      <div className="space-y-3">
-        {listings.map((listing) => (
-          <DealerCard
-            key={listing._id}
-            listing={listing}
-            isSelected={selectedDealers.has(listing._id)}
-            onToggle={() => toggleDealer(listing._id)}
-            isSelectable={status === "ready"}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Individual dealer card
-interface DealerCardProps {
-  listing: Listing;
-  isSelected: boolean;
-  onToggle: () => void;
-  isSelectable: boolean;
-}
-
-const DealerCard = ({
-  listing,
-  isSelected,
-  onToggle,
-  isSelectable,
-}: DealerCardProps) => {
-  const savings = calculateSavings(listing.msrp, listing.discountedPrice);
-
-  return (
-    <Card
-      onClick={isSelectable ? onToggle : undefined}
-      className={`transition-all ${
-        isSelected ? "border-primary border-2" : ""
-      } ${isSelectable ? "cursor-pointer hover:shadow-md" : ""}`}
-    >
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start mb-3">
-          <div className="flex-1">
-            <h3 className="font-bold text-foreground">
-              {listing.dealerName}
-            </h3>
-            <p className="text-sm text-muted-foreground">{listing.phone}</p>
-            {listing.address && (
-              <p className="text-xs text-muted-foreground mt-1">{listing.address}</p>
-            )}
-          </div>
-          {isSelectable && (
-            <div className="shrink-0">
-              {isSelected ? (
-                <CheckCircle2 className="h-6 w-6 text-primary" />
-              ) : (
-                <Circle className="h-6 w-6 text-muted-foreground" />
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">MSRP:</span>
-            <span className="text-sm line-through text-muted-foreground">
-              {formatCurrency(listing.msrp)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-semibold text-foreground">
-              Price:
-            </span>
-            <span className="text-lg font-bold text-primary">
-              {formatCurrency(listing.discountedPrice)}
-            </span>
-          </div>
-          {savings > 0 && (
-            <div className="text-xs text-green-600 text-right">
-              Save {savings}% ($
-              {(listing.msrp - listing.discountedPrice).toLocaleString()})
-            </div>
-          )}
-          <div className="flex justify-between items-center text-sm text-muted-foreground pt-2 border-t border-border">
-            <span>MPG: {listing.mpg}</span>
-            {listing.distance !== undefined && (
-              <span className="text-xs text-muted-foreground">
-                {listing.distance.toFixed(1)} mi away
-              </span>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};

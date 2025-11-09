@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexReactClient } from "convex/react";
+import { ConvexProviderWithAuth } from "convex/react";
 import { AuthProvider } from "./lib/auth.tsx";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Navbar } from "./components/Navbar";
@@ -8,7 +9,9 @@ import { SessionsPage } from "./pages/SessionsPage";
 import { CreateSessionPage } from "./pages/CreateSessionPage";
 import { SessionDetailPage } from "./pages/SessionDetailPage";
 import { Logo } from "./components/Logo";
+import { Toaster } from "./components/ui/sonner";
 import "./index.css";
+import { useMemo } from "react";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
@@ -16,11 +19,44 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <ConvexProvider client={convex}>
+        <ConvexAuth>
           <AppRoutes />
-        </ConvexProvider>
+          <Toaster />
+        </ConvexAuth>
       </AuthProvider>
     </BrowserRouter>
+  );
+}
+
+// Wrapper to integrate Auth0 with Convex
+function ConvexAuth({ children }: { children: React.ReactNode }) {
+  const { isLoading, isAuthenticated, getAccessTokenSilently } = useAuth0();
+
+  const useAuthFromAuth0 = useMemo(
+    () => () => ({
+      isLoading,
+      isAuthenticated,
+      fetchAccessToken: async ({
+        forceRefreshToken,
+      }: {
+        forceRefreshToken: boolean;
+      }) => {
+        try {
+          return await getAccessTokenSilently({
+            cacheMode: forceRefreshToken ? "off" : "on",
+          });
+        } catch (error) {
+          return null;
+        }
+      },
+    }),
+    [isLoading, isAuthenticated, getAccessTokenSilently]
+  );
+
+  return (
+    <ConvexProviderWithAuth client={convex} useAuth={useAuthFromAuth0}>
+      {children}
+    </ConvexProviderWithAuth>
   );
 }
 

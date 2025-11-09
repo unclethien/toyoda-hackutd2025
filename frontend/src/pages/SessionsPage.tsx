@@ -8,6 +8,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 export const SessionsPage = () => {
   const { user } = useAuth0();
@@ -98,10 +99,14 @@ const SessionCard = ({ session, onClick }: SessionCardProps) => {
       confirm(`Delete this search for ${session.model} ${session.version}?`)
     ) {
       try {
+        toast.loading("Deleting session...", { id: "delete-session" });
         await deleteSession({ id: session._id as Id<"sessions"> });
+        toast.success("Session deleted", { id: "delete-session" });
       } catch (error) {
         console.error("Failed to delete session:", error);
-        alert("Failed to delete session. Please try again.");
+        toast.error("Failed to delete session. Please try again.", {
+          id: "delete-session",
+        });
       }
     }
   };
