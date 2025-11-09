@@ -4,6 +4,9 @@ docs/
 plans/
 CLAUDE.md
 
+# Repomix output
+repomix-output.xml
+
 # Markdown files (except README)
 *.md
 !README.md
@@ -49,3 +52,4 @@ coverage/
 # Temporary files
 *.tmp
 .cache/
+
