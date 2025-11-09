@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 from pydantic import BaseModel
 from enum import Enum
 
@@ -13,7 +13,7 @@ class DealerQuery(BaseModel):
     msrp: int
     listing_price: int
     is_dealing: bool
-    competing_price: int | None
+    competing_price: Optional[int] = None
     
     phone_number: str
     user_id: str

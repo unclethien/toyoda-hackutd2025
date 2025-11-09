@@ -148,9 +148,19 @@ export const fetchDealers = action({
       });
 
       // 3. Call Go backend
-      // Note: Convex environment variables are configured via `npx convex env set`
-      const backendUrl = "https://unsymptomatic-dacia-tribal.ngrok-free.dev";
-      const response = await fetch(`${backendUrl}/api/sellers?zip=${session.zipCode}&radis=${session.radiusMiles}&model=${session.model}`, {
+      // Convex runs in Docker, so use host.docker.internal to access host services
+      // This works on Docker Desktop (Mac/Windows). On Linux, use the host's IP address.
+      const backendUrl = "http://host.docker.internal:8080";
+      const params = new URLSearchParams({
+        zip: session.zipCode,
+        radius: String(session.radiusMiles ?? ""),
+        model: session.model ?? "",
+      });
+
+      const requestUrl = `${backendUrl}/api/sellers?${params.toString()}`;
+      console.log("Fetching dealers from:", requestUrl);
+
+      const response = await fetch(requestUrl, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -158,8 +168,15 @@ export const fetchDealers = action({
       });
 
       if (!response.ok) {
+        const errorText = await response.text().catch(() => "No error details");
+        console.error("Backend request failed:", {
+          url: requestUrl,
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+        });
         throw new Error(
-          `Backend error: ${response.status} ${response.statusText}`
+          `Backend error: ${response.status} ${response.statusText} - ${errorText.substring(0, 100)}`
         );
       }
 
@@ -298,9 +315,10 @@ export const initiateBatchCalls = action({
         user_id: session.userId,
       }));
 
-      // 5. Call Python agent server
-      const agentServerUrl = "https://unsymptomatic-dacia-tribal.ngrok-free.dev"; // TODO: Move to env var
-      const response = await fetch(`${agentServerUrl}/api/calls/submit`, {
+      // 5. Call Go backend (which proxies to Python agent server)
+      // Convex runs in Docker, so use host.docker.internal to access host services
+      const backendUrl = "http://host.docker.internal:8080";
+      const response = await fetch(`${backendUrl}/api/calls/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

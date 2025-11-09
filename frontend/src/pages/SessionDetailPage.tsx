@@ -7,6 +7,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
 import { ListingsTable } from "@/components/listings/ListingsTable";
@@ -101,13 +103,16 @@ export const SessionDetailPage = () => {
 
       {/* Stats */}
       {stats && (
-        <div className="bg-card border-b border-border px-4 py-3">
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <StatCard label="Dealers" value={stats.totalListings} />
-            <StatCard label="Calls" value={stats.totalCalls} />
-            <StatCard label="Quotes" value={stats.totalQuotes} />
+        <>
+          <div className="bg-card px-4 py-3">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <StatCard label="Dealers" value={stats.totalListings} />
+              <StatCard label="Calls" value={stats.totalCalls} />
+              <StatCard label="Quotes" value={stats.totalQuotes} />
+            </div>
           </div>
-        </div>
+          <Separator />
+        </>
       )}
 
       {/* Status Info */}
@@ -119,9 +124,16 @@ export const SessionDetailPage = () => {
       )}
 
       {session.status === "fetching" && (
-        <div className="p-4 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Searching for dealers...</p>
+        <div className="p-4 space-y-4">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Searching for dealers...</p>
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </div>
         </div>
       )}
 

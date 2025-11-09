@@ -116,12 +116,24 @@ export function ListingsTable({ listings, sessionId }: ListingsTableProps) {
     }
   };
 
-  // Poll for call updates every 3 seconds
+  // Poll for call updates every 10 seconds ONLY when there are active calls
   useEffect(() => {
+    // Check if there are any calls in progress
+    const hasActiveCalls = listings.some(
+      (listing) =>
+        listing.callStatus === "queued" ||
+        listing.callStatus === "dialing" ||
+        listing.callStatus === "connected"
+    );
+
+    if (!hasActiveCalls) {
+      return; // Don't poll if no active calls
+    }
+
     fetchCallData(); // Initial fetch
-    const interval = setInterval(fetchCallData, 3000);
+    const interval = setInterval(fetchCallData, 10000); // Poll every 10 seconds (increased from 3s)
     return () => clearInterval(interval);
-  }, []);
+  }, [listings]); // Re-run when listings change
 
   // Merge backend call data with listings
   const listingsWithCallData = useMemo(() => {
@@ -283,18 +295,17 @@ export function ListingsTable({ listings, sessionId }: ListingsTableProps) {
               
               return (
                 <AccordionItem key={listing._id} value={listing._id}>
-                  <AccordionTrigger className="hover:no-underline px-4">
-                    <div className="flex items-center gap-3 w-full" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={listing.selected}
-                        onCheckedChange={() => {
-                          handleToggleSelection(listing._id, listing.selected);
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label="Select listing"
-                      />
-                      
-                      <div className="flex items-center justify-between flex-1 text-left">
+                  <div className="flex items-center gap-3 px-4 py-2">
+                    <Checkbox
+                      checked={listing.selected}
+                      onCheckedChange={() => {
+                        handleToggleSelection(listing._id, listing.selected);
+                      }}
+                      aria-label="Select listing"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <AccordionTrigger className="hover:no-underline flex-1 py-2">
+                      <div className="flex items-center justify-between w-full text-left pr-2">
                         <div className="flex flex-col gap-1">
                           <div className="font-semibold text-base">{listing.dealerName}</div>
                           <div className="flex items-center gap-2 flex-wrap">
@@ -319,23 +330,23 @@ export function ListingsTable({ listings, sessionId }: ListingsTableProps) {
                           {renderStatusBadge(listing.callStatus)}
                         </div>
                       </div>
-                    </div>
-                  </AccordionTrigger>
+                    </AccordionTrigger>
+                  </div>
                   
                   <AccordionContent className="px-4 pb-4">
                     <div className="space-y-4 pt-2">
                       {/* Image Carousel */}
                       {listing.imageUrls && listing.imageUrls.length > 0 && (
                         <div className="w-full">
-                          <Carousel className="w-full max-w-2xl mx-auto">
+                          <Carousel className="w-full mx-auto">
                             <CarouselContent>
                               {listing.imageUrls.map((imageUrl, index) => (
                                 <CarouselItem key={index}>
-                                  <div className="relative aspect-video w-full overflow-hidden rounded-lg border">
+                                  <div className="relative w-full overflow-hidden rounded-lg border" style={{ height: "275px" }}>
                                     <img
                                       src={imageUrl}
                                       alt={`${listing.dealerName} vehicle ${index + 1}`}
-                                      className="h-full w-full object-cover"
+                                      className="h-full w-full object-contain bg-gray-50"
                                       onError={(e) => {
                                         const target = e.target as HTMLImageElement;
                                         target.src = "https://via.placeholder.com/640x480?text=Image+Not+Available";

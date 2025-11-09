@@ -9,12 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown } from "lucide-react";
 
 export const CreateSessionPage = () => {
   const { user } = useAuth0();
@@ -23,6 +23,7 @@ export const CreateSessionPage = () => {
   const fetchDealers = useAction(api.actions.fetchDealers);
 
   const [formData, setFormData] = useState({
+    year: "",
     make: "",
     model: "",
     version: "",
@@ -72,6 +73,16 @@ export const CreateSessionPage = () => {
   const validate = () => {
     const newErrors: Record<string, string> = {};
 
+    if (!formData.year) {
+      newErrors.year = "Year is required";
+    } else {
+      const year = parseInt(formData.year);
+      const currentYear = new Date().getFullYear();
+      if (isNaN(year) || year < 1900 || year > currentYear + 1) {
+        newErrors.year = `Must be a valid year between 1900 and ${currentYear + 1}`;
+      }
+    }
+
     if (!formData.make) newErrors.make = "Make is required";
     if (!formData.model) newErrors.model = "Model is required";
     if (!formData.version) newErrors.version = "Version is required";
@@ -104,7 +115,7 @@ export const CreateSessionPage = () => {
       // Step 1: Create session
       const sessionId = await createSession({
         userId: user.sub,
-        carType: `${formData.make} ${formData.model}`, // Combine make and model for carType
+        carType: `${formData.year} ${formData.make} ${formData.model}`, // Combine year, make and model for carType
         model: formData.model,
         version: formData.version,
         zipCode: formData.zipCode,
@@ -153,26 +164,54 @@ export const CreateSessionPage = () => {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        {/* Year */}
+        <div className="space-y-2">
+          <Label htmlFor="year">
+            Year *
+          </Label>
+          <Input
+            id="year"
+            type="text"
+            placeholder="2024"
+            maxLength={4}
+            value={formData.year}
+            onChange={(e) =>
+              setFormData({ ...formData, year: e.target.value })
+            }
+            className={errors.year ? "border-destructive" : ""}
+          />
+          {errors.year && (
+            <p className="text-destructive text-sm">{errors.year}</p>
+          )}
+        </div>
+
         {/* Make (Manufacturer) */}
         <div className="space-y-2">
           <Label htmlFor="make">
             Make *
           </Label>
-          <Select
-            value={formData.make}
-            onValueChange={handleMakeChange}
-          >
-            <SelectTrigger id="make" className={errors.make ? "border-destructive" : ""}>
-              <SelectValue placeholder="Select make" />
-            </SelectTrigger>
-            <SelectContent>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                id="make"
+                variant="outline"
+                className={`w-full justify-between ${errors.make ? "border-destructive" : ""}`}
+              >
+                {formData.make || "Select make"}
+                <ChevronDown className="h-4 w-4 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px]" align="start">
               {carDatabase.map((make) => (
-                <SelectItem key={make.name} value={make.name}>
+                <DropdownMenuItem
+                  key={make.name}
+                  onSelect={() => handleMakeChange(make.name)}
+                >
                   {make.name}
-                </SelectItem>
+                </DropdownMenuItem>
               ))}
-            </SelectContent>
-          </Select>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {errors.make && (
             <p className="text-destructive text-sm">{errors.make}</p>
           )}
@@ -183,22 +222,29 @@ export const CreateSessionPage = () => {
           <Label htmlFor="model">
             Model *
           </Label>
-          <Select
-            value={formData.model}
-            onValueChange={handleModelChange}
-            disabled={!formData.make}
-          >
-            <SelectTrigger id="model" className={errors.model ? "border-destructive" : ""} disabled={!formData.make}>
-              <SelectValue placeholder={formData.make ? "Select model" : "Select make first"} />
-            </SelectTrigger>
-            <SelectContent>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                id="model"
+                variant="outline"
+                className={`w-full justify-between ${errors.model ? "border-destructive" : ""}`}
+                disabled={!formData.make}
+              >
+                {formData.model || (formData.make ? "Select model" : "Select make first")}
+                <ChevronDown className="h-4 w-4 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px]" align="start">
               {availableModels.map((model) => (
-                <SelectItem key={model.name} value={model.name}>
+                <DropdownMenuItem
+                  key={model.name}
+                  onSelect={() => handleModelChange(model.name)}
+                >
                   {model.name}
-                </SelectItem>
+                </DropdownMenuItem>
               ))}
-            </SelectContent>
-          </Select>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {errors.model && (
             <p className="text-destructive text-sm">{errors.model}</p>
           )}
@@ -209,24 +255,29 @@ export const CreateSessionPage = () => {
           <Label htmlFor="version">
             Version/Trim *
           </Label>
-          <Select
-            value={formData.version}
-            onValueChange={(value) =>
-              setFormData({ ...formData, version: value })
-            }
-            disabled={!formData.model}
-          >
-            <SelectTrigger id="version" className={errors.version ? "border-destructive" : ""} disabled={!formData.model}>
-              <SelectValue placeholder={formData.model ? "Select version" : "Select model first"} />
-            </SelectTrigger>
-            <SelectContent>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                id="version"
+                variant="outline"
+                className={`w-full justify-between ${errors.version ? "border-destructive" : ""}`}
+                disabled={!formData.model}
+              >
+                {formData.version || (formData.model ? "Select version" : "Select model first")}
+                <ChevronDown className="h-4 w-4 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-[300px]" align="start">
               {availableVersions.map((version) => (
-                <SelectItem key={version} value={version}>
+                <DropdownMenuItem
+                  key={version}
+                  onSelect={() => setFormData({ ...formData, version })}
+                >
                   {version}
-                </SelectItem>
+                </DropdownMenuItem>
               ))}
-            </SelectContent>
-          </Select>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {errors.version && (
             <p className="text-destructive text-sm">{errors.version}</p>
           )}
