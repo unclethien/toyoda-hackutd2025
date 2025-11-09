@@ -1,0 +1,8 @@
+You are given the transcript of a call from a car purchase advisor to a car dealership.
+
+The goal of the advisor is to confirm the availability and ask for extra information about a car reportedly listed at the dealer. So based on the conversation's transcript, extract the key information and put in a JSON file as follows:
+{
+    "is_available": bool, # whether the car is still available
+    "deal_price": int, # what is the actual listed price of the car
+    "remarks": str, # further remarks about the car by the dealer
+}
