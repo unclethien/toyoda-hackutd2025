@@ -114,7 +114,134 @@ curl "http://localhost:8080/api/sellers?zip=10001"
 }
 ```
 
-### 2. Health Check
+### 2. Submit Calls to Dealers
+
+Initiate phone calls to dealers through the agent service. This endpoint receives car/dealer information from the frontend and forwards it to the agent service with generated user IDs.
+
+**Endpoint:** `POST /api/calls/submit`
+
+**Request Body:**
+
+```json
+[
+  {
+    "model": "Camry",
+    "year": 2025,
+    "zipcode": "75007",
+    "dealer_name": "Freeman Toyota",
+    "phone_number": "8179044876",
+    "msrp": 30000,
+    "listing_price": 28500
+  }
+]
+```
+
+**Request Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| model | string | Yes | Car model name |
+| year | integer | Yes | Year the car was produced |
+| zipcode | string | Yes | ZIP code for the dealer location |
+| dealer_name | string | Yes | Name of the dealer |
+| phone_number | string | Yes | Dealer's phone number |
+| msrp | float | Yes | Manufacturer's Suggested Retail Price |
+| listing_price | float | Yes | Current listing price |
+
+**Example Request:**
+
+```bash
+curl -X POST http://localhost:8080/api/calls/submit \
+  -H "Content-Type: application/json" \
+  -d '[
+    {
+      "model": "Camry",
+      "year": 2025,
+      "zipcode": "75007",
+      "dealer_name": "Freeman Toyota",
+      "phone_number": "8179044876",
+      "msrp": 30000,
+      "listing_price": 28500
+    },
+    {
+      "model": "RAV4",
+      "year": 2025,
+      "zipcode": "75007",
+      "dealer_name": "Toyota of Plano",
+      "phone_number": "9724681800",
+      "msrp": 35000,
+      "listing_price": 33500
+    }
+  ]'
+```
+
+**Success Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "message": "Calls initiated successfully",
+  "data": {
+    // Response from agent service
+  }
+}
+```
+
+**Error Responses:**
+
+```json
+// 400 Bad Request - Invalid request body
+{
+  "success": false,
+  "message": "Invalid request body: <error details>"
+}
+
+// 400 Bad Request - No requests provided
+{
+  "success": false,
+  "message": "At least one call request is required"
+}
+
+// 400 Bad Request - Missing required fields
+{
+  "success": false,
+  "message": "Request 0: Missing required fields (model, year, zipcode, dealer_name, phone_number)"
+}
+
+// 500 Internal Server Error - Agent service error
+{
+  "success": false,
+  "message": "Failed to initiate calls: <error details>"
+}
+```
+
+**Backend to Agent Service:**
+
+The backend transforms the request and calls the agent service at `http://localhost:8000/calls/init` with:
+
+```json
+[
+  {
+    "user_id": "generated-uuid-v4",
+    "make": "toyota",
+    "model": "Camry",
+    "year": 2025,
+    "zipcode": "75007",
+    "dealer_name": "Freeman Toyota",
+    "phone_number": "8179044876",
+    "msrp": 30000,
+    "listing_price": 28500
+  }
+]
+```
+
+**Notes:**
+- The backend automatically generates a unique `user_id` (UUID v4) for each call request
+- The `make` field is automatically set to `"toyota"` (constant)
+- The agent service must be running on `localhost:8000` for this endpoint to work
+- Multiple call requests can be submitted in a single API call
+
+### 3. Health Check
 
 Check if the server is running.
 

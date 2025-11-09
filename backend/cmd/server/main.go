@@ -18,6 +18,7 @@ func main() {
 	// Register routes
 	router.HandleFunc("/api/sellers", handlers.GetSellers).Methods("GET")
 	router.HandleFunc("/api/dealers/search", handlers.SearchDealers).Methods("POST")
+	router.HandleFunc("/api/calls/submit", handlers.SubmitCalls).Methods("POST")
 
 	// Health check endpoint
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
