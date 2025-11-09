@@ -34,6 +34,8 @@ export default defineSchema({
     distance: v.optional(v.number()),
     selected: v.boolean(),
     createdAt: v.number(),
+    imageUrls: v.optional(v.array(v.string())),
+    link: v.optional(v.string()),
   })
     .index("by_session", ["sessionId"])
     .index("by_session_and_selected", ["sessionId", "selected"]),

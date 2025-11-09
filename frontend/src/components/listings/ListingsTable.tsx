@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { Phone, Scale, CheckCircle2, AlertCircle, Clock, Loader2, PhoneCall, FileText, MapPin } from "lucide-react";
+import { Phone, Scale, CheckCircle2, AlertCircle, Clock, Loader2, PhoneCall, FileText, MapPin, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import { formatCurrency, calculateSavings } from "../../lib/utils";
 import { toast } from "sonner";
 import { CompareDrawer } from "./CompareDrawer";
@@ -58,6 +65,8 @@ export interface Listing {
   callStatus?: "queued" | "dialing" | "connected" | "completed" | "failed";
   callId?: Id<"calls">;
   hasQuote?: boolean;
+  imageUrls?: string[];
+  link?: string;
 }
 
 interface ListingsTableProps {
@@ -314,60 +323,101 @@ export function ListingsTable({ listings, sessionId }: ListingsTableProps) {
                   </AccordionTrigger>
                   
                   <AccordionContent className="px-4 pb-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                      {/* Left Column */}
-                      <div className="space-y-3">
-                        <div>
-                          <div className="text-sm font-medium text-muted-foreground">Contact</div>
-                          <div className="text-sm mt-1">{listing.phone}</div>
-                          {listing.address && (
-                            <div className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
-                              <MapPin className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-                              <span>{listing.address}</span>
+                    <div className="space-y-4 pt-2">
+                      {/* Image Carousel */}
+                      {listing.imageUrls && listing.imageUrls.length > 0 && (
+                        <div className="w-full">
+                          <Carousel className="w-full max-w-2xl mx-auto">
+                            <CarouselContent>
+                              {listing.imageUrls.map((imageUrl, index) => (
+                                <CarouselItem key={index}>
+                                  <div className="relative aspect-video w-full overflow-hidden rounded-lg border">
+                                    <img
+                                      src={imageUrl}
+                                      alt={`${listing.dealerName} vehicle ${index + 1}`}
+                                      className="h-full w-full object-cover"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.src = "https://via.placeholder.com/640x480?text=Image+Not+Available";
+                                      }}
+                                    />
+                                  </div>
+                                </CarouselItem>
+                              ))}
+                            </CarouselContent>
+                            <CarouselPrevious />
+                            <CarouselNext />
+                          </Carousel>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Left Column */}
+                        <div className="space-y-3">
+                          <div>
+                            <div className="text-sm font-medium text-muted-foreground">Contact</div>
+                            <div className="text-sm mt-1">{listing.phone}</div>
+                            {listing.address && (
+                              <div className="flex items-start gap-1 text-sm text-muted-foreground mt-1">
+                                <MapPin className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                                <span>{listing.address}</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <div className="text-sm font-medium text-muted-foreground">MSRP</div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-sm">
+                                {formatCurrency(listing.msrp)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Right Column */}
+                        <div className="space-y-3">
+                          <div>
+                            <div className="text-sm font-medium text-muted-foreground">Fuel Economy</div>
+                            <div className="text-sm mt-1">{listing.mpg} MPG</div>
+                          </div>
+                          
+                          {listing.distance !== undefined && (
+                            <div>
+                              <div className="text-sm font-medium text-muted-foreground">Distance</div>
+                              <div className="text-sm mt-1">{listing.distance.toFixed(1)} mi</div>
                             </div>
                           )}
                         </div>
-                        
-                        <div>
-                          <div className="text-sm font-medium text-muted-foreground">MSRP</div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-sm line-through text-muted-foreground">
-                              {formatCurrency(listing.msrp)}
-                            </span>
-                          </div>
-                        </div>
                       </div>
-                      
-                      {/* Right Column */}
-                      <div className="space-y-3">
-                        <div>
-                          <div className="text-sm font-medium text-muted-foreground">Fuel Economy</div>
-                          <div className="text-sm mt-1">{listing.mpg} MPG</div>
-                        </div>
-                        
-                        {listing.distance !== undefined && (
-                          <div>
-                            <div className="text-sm font-medium text-muted-foreground">Distance</div>
-                            <div className="text-sm mt-1">{listing.distance.toFixed(1)} mi</div>
-                          </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        {listing.link && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => window.open(listing.link, "_blank")}
+                            className="flex-1"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                            Visit Dealer Page
+                          </Button>
                         )}
                         
-                        {/* Actions */}
                         {listing.callStatus === "completed" && !listing.hasQuote && listing.callId && (
-                          <div className="pt-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedListing(listing);
-                                setQuoteFormOpen(true);
-                              }}
-                              className="w-full"
-                            >
-                              <FileText className="h-3.5 w-3.5 mr-2" />
-                              Record Quote
-                            </Button>
-                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedListing(listing);
+                              setQuoteFormOpen(true);
+                            }}
+                            className="flex-1"
+                          >
+                            <FileText className="h-3.5 w-3.5 mr-2" />
+                            Record Quote
+                          </Button>
                         )}
                       </div>
                     </div>

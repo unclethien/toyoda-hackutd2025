@@ -233,7 +233,7 @@ const FetchDealers = ({
       toast.loading("Searching for dealers...", { id: "fetch-dealers" });
 
       const result = await fetchDealers({ sessionId });
-
+      console.log("result", result);
       toast.success(
         `Found ${result.count} dealer${result.count !== 1 ? "s" : ""}!`,
         { id: "fetch-dealers" }

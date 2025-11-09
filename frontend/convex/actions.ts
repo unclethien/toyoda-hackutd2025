@@ -5,22 +5,115 @@ import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import _ from "lodash";
 
-// Types for the backend response
-interface DealerResponse {
-  dealerName: string;
+interface SearchArea {
+  zip: string;
+  radius: number;
+  dynamicRadius: boolean;
+  city: string;
+  state: string;
+  latitude: number;
+  longitude: number;
+  dynamicRadii: number[];
+}
+
+interface Dealer {
+  carfaxId: string;
+  dealerInventoryUrl: string;
+  cfxMicrositeUrl: string;
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
   phone: string;
-  address?: string;
+  latitude: string;
+  longitude: string;
+  dealerAverageRating: number;
+  dealerReviewComments: string;
+  dealerReviewDate: string;
+  dealerReviewReviewer: string;
+  dealerReviewRating: number;
+  dealerReviewCount: number;
+  ddcValue: number;
+  dealerBadgingExperience: string;
+}
+
+interface MonthlyPaymentEstimate {
+  price: number;
+  downPaymentPercent: number;
+  interestRate: number;
+  termInMonths: number;
+  loanAmount: number;
+  downPaymentAmount: number;
+  monthlyPayment: number;
+}
+
+interface ListingImages {
+  baseUrl: string;
+  large: string[];
+  medium: string[];
+  small: string[];
+  firstPhoto: {
+    large: string;
+    medium: string;
+    small: string;
+  };
+}
+
+interface Listing {
+  dealer: Dealer;
+  id: string;
+  vin: string;
+  year: number;
+  make: string;
+  model: string;
+  trim: string;
+  subTrim: string;
+  topOptions: string[];
+  mileage: number;
+  listPrice: number;
+  currentPrice: number;
+  monthlyPaymentEstimate: MonthlyPaymentEstimate;
+  exteriorColor: string;
+  interiorColor: string;
+  engine: string;
+  displacement: string;
+  drivetype: string;
+  transmission: string;
+  fuel: string;
+  mpgCity: number;
+  mpgHighway: number;
+  bodytype: string;
+  vehicleCondition: string;
+  cabType: string;
+  bedLength: string;
+  followCount: number;
+  stockNumber: string;
+  imageCount: number;
+  images: ListingImages;
+  firstSeen: string;
+  distanceToDealer: number;
+  recordType: string;
+  dealerType: string;
+  advantage: boolean;
+  vdpUrl: string;
+  sortScore: number;
+  baseScore: number;
+  tpCostPerVdp: number;
+  atomOtherOptions: string[];
+  atomTopOptions: string[];
+  tpRetentionScore: number;
+  dealerBadgingExperience: string;
   msrp: number;
-  discountedPrice: number;
-  mpg: number;
-  distance?: number;
+  mpgCombined: number;
+  atomMake: string;
+  atomModel: string;
+  atomTrim: string;
 }
 
 interface BackendResponse {
-  success: boolean;
-  dealers: DealerResponse[];
-  count: number;
-  message: string;
+  searchArea: SearchArea;
+  listings: Listing[];
 }
 
 /**
@@ -57,18 +150,11 @@ export const fetchDealers = action({
       // 3. Call Go backend
       // Note: Convex environment variables are configured via `npx convex env set`
       const backendUrl = "https://unsymptomatic-dacia-tribal.ngrok-free.dev";
-      const response = await fetch(`${backendUrl}/api/dealers/search`, {
-        method: "POST",
+      const response = await fetch(`${backendUrl}/api/sellers?zip=${session.zipCode}&radis=${session.radiusMiles}&model=${session.model}`, {
+        method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          make: session.carType.split(" ")[0], // Extract make from "Toyota RAV4"
-          model: session.model,
-          version: session.version,
-          zipCode: session.zipCode,
-          radiusMiles: session.radiusMiles,
-        }),
       });
 
       if (!response.ok) {
@@ -80,25 +166,38 @@ export const fetchDealers = action({
       const data = (await response.json()) as BackendResponse;
 
       // 4. Validate response
-      if (!data.success || !data.dealers || !Array.isArray(data.dealers)) {
+      if (!data.listings || !Array.isArray(data.listings)) {
         throw new Error("Invalid response from backend");
       }
 
-      // 5. Insert dealers as listings
+      // 5. Filter out listings missing required fields and insert valid ones
       const listingIds: Id<"listings">[] = [];
-      for (const dealer of data.dealers) {
-        const listingId = await ctx.runMutation(api.listings.create, {
-          sessionId: args.sessionId,
-          dealerName: dealer.dealerName,
-          phone: dealer.phone,
-          address: dealer.address || "",
-          msrp: dealer.msrp,
-          discountedPrice: dealer.discountedPrice || dealer.msrp,
-          mpg: dealer.mpg || 0,
-          distance: dealer.distance || 0,
-          selected: false,
-        });
-        listingIds.push(listingId);
+      for (const dealer of data.listings) {
+        // Skip listings that don't have required fields or have invalid prices
+        if (!dealer.msrp || !dealer.dealer?.name || !dealer.dealer?.phone || !dealer.currentPrice || dealer.currentPrice === 0) {
+          console.log("Skipping listing due to missing required fields or invalid price:", dealer);
+          continue;
+        }
+
+        try {
+          const listingId = await ctx.runMutation(api.listings.create, {
+            sessionId: args.sessionId,
+            dealerName: dealer.dealer.name,
+            phone: dealer.dealer.phone,
+            address: dealer.dealer.address || "",
+            msrp: dealer.msrp,
+            discountedPrice: dealer.currentPrice,
+            mpg: dealer.mpgCombined || 0,
+            distance: dealer.distanceToDealer || 0,
+            selected: false,
+            imageUrls: dealer.images?.large || [],
+            link: dealer.vdpUrl || "",
+          });
+          listingIds.push(listingId);
+        } catch (error) {
+          // Log but don't fail the entire batch if one listing fails
+          console.error("Failed to create listing:", error, dealer);
+        }
       }
 
       // 6. Update session status to "ready"
@@ -109,7 +208,7 @@ export const fetchDealers = action({
 
       return {
         success: true,
-        count: data.dealers.length,
+        count: listingIds.length,
         listingIds,
       };
     } catch (error) {

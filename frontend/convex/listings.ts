@@ -14,6 +14,8 @@ export const create = mutation({
     mpg: v.number(),
     distance: v.optional(v.number()),
     selected: v.boolean(),
+    imageUrls: v.optional(v.array(v.string())),
+    link: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -29,6 +31,8 @@ export const create = mutation({
       distance: args.distance,
       selected: args.selected,
       createdAt: now,
+      imageUrls: args.imageUrls,
+      link: args.link,
     });
 
     return id;

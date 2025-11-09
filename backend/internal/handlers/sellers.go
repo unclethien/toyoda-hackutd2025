@@ -24,6 +24,7 @@ func GetSellers(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	zip := queryParams.Get("zip")
 	radius := queryParams.Get("radius")
+	model := queryParams.Get("model")
 
 	// Validate required parameters
 	if zip == "" {
@@ -37,8 +38,12 @@ func GetSellers(w http.ResponseWriter, r *http.Request) {
 		radius = "50" // Default radius
 	}
 
+	if model == "" {
+		model = "RAV4"
+	}
+
 	// Build CARFAX API URL
-	carfaxURL := buildCarfaxURL(zip, radius)
+	carfaxURL := buildCarfaxURL(zip, radius, model)
 
 	// Make request to CARFAX API
 	response, err := makeCarfaxRequest(carfaxURL)
@@ -56,11 +61,12 @@ func GetSellers(w http.ResponseWriter, r *http.Request) {
 }
 
 // buildCarfaxURL constructs the CARFAX API URL with parameters
-func buildCarfaxURL(zip, radius string) string {
+func buildCarfaxURL(zip, radius, model string) string {
 	baseURL := "https://helix.carfax.com/search/v2/vehicles"
 	params := url.Values{}
 	params.Add("zip", zip)
 	params.Add("radius", radius)
+	params.Add("model", model)
 	params.Add("sort", "BEST")
 	params.Add("dynamicRadius", "true")
 	params.Add("make", "Toyota")
