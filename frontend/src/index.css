@@ -1,12 +1,10 @@
-@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&display=swap");
 @import "tailwindcss";
 
 @theme {
   --color-toyoda-red: #eb0a1e;
   --color-functional-gray: #58595b;
 
-  --font-family-roboto: Roboto, sans-serif;
-  --font-family-open-sans: "Open Sans", sans-serif;
+  --font-family-sora: "Sora", sans-serif;
 
   /* ShadCN UI Colors */
   --color-background: hsl(0 0% 100%);
@@ -60,7 +58,7 @@
 }
 
 body {
-  font-family: "Roboto", "Open Sans", sans-serif;
+  font-family: "Sora", sans-serif;
   color: var(--functional-gray);
   background-color: var(--functional-gray);
   min-height: 100vh;

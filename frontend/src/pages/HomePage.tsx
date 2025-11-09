@@ -35,8 +35,8 @@ export const HomePage = () => {
             <Logo size={280} className="mb-4" />
           </div>
           <h1 className="text-4xl md:text-5xl font-bold">TOYODA</h1>
-          <h2 className="text-2xl md:text-3xl font-bold"> Car‑hunting in the Jedi Way</h2>
-          <p className="text-lg text-muted-foreground">
+          <h2 className="text-xl md:text-2xl font-bold"> Car‑hunting in the Jedi Way</h2>
+          <p className="text-md text-muted-foreground">
             Best out-the-door prices, find them you will. <br /> Our droid calls the dealers for you.
           </p>
         </div>
@@ -50,7 +50,7 @@ export const HomePage = () => {
             />
             <Feature
               title="AI Calls Dealers"
-              description="Our AI contacts all dealers in your area automatically"
+              description="Our AI contacts dealers automatically"
             />
             <Feature
               title="Compare Quotes"
@@ -68,10 +68,6 @@ export const HomePage = () => {
           Get Started
           <ArrowRight className="h-5 w-5" />
         </Button>
-
-        <p className="text-sm text-muted-foreground">
-          Free to use • No credit card required
-        </p>
       </div>
     </div>
   );
